@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b10; --bg2: #13151f; --card: #1a1d2b; --border: #2a2e42;
+  --text: #e8eaed; --text2: #8b90a5; --accent: #6c5ce7; --success: #00b894;
+  --danger: #e17055; --warning: #fdcb6e; --user-bubble: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  --shadow: 0 4px 24px rgba(0,0,0,0.3); --input-bg: #1e2030;
+  --scrollbar-thumb: #2a2e42; --scrollbar-track: #13151f;
+}
+[data-theme="light"] {
+  --bg: #f0f2f5; --bg2: #ffffff; --card: #ffffff; --border: #e0e3eb;
+  --text: #1a1d2b; --text2: #6b7280; --accent: #6c5ce7; --success: #00b894;
+  --danger: #e17055; --warning: #fdcb6e; --user-bubble: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  --shadow: 0 4px 24px rgba(0,0,0,0.08); --input-bg: #f7f8fa;
+  --scrollbar-thumb: #d0d3db; --scrollbar-track: #f0f2f5;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(--text);
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  background: var(--bg2); border-bottom: 1px solid var(--border); z-index: 100;
+  flex-shrink: 0;
+}
+.header .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.header .logo span { font-size: 0.8rem; font-weight: 400; color: var(--text2); margin-right: 6px; }
+.header-right { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.icon-btn {
+  width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card); color: var(--text); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; font-size: 1.15rem; transition: all 0.2s;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.provider-badge {
+  padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500;
+  background: var(--accent); color: #fff; white-space: nowrap;
+}
+
+/* Chat Tabs */
+.chat-tabs {
+  display: flex; align-items: center; gap: 6px; padding: 8px 20px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+}
+.chat-tabs::-webkit-scrollbar { display: none; }
+.chat-tab {
+  padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;
+  background: var(--card); color: var(--text2); border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s; position: relative;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chat-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.chat-tab .close-tab {
+  margin-right: 6px; font-size: 0.7rem; opacity: 0.6; cursor: pointer;
+  display: inline-block;
+}
+.chat-tab .close-tab:hover { opacity: 1; color: var(--danger); }
+.new-chat-btn {
+  padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+  background: transparent; color: var(--accent); border: 1px dashed var(--accent);
+  cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+}
+.new-chat-btn:hover { background: var(--accent); color: #fff; }
+
+/* Main Area */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.messages-container {
+  flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;
+}
+
+/* Quick Prompts */
+.quick-prompts {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  padding: 20px; animation: fadeIn 0.5s;
+}
+.quick-prompt {
+  padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
+  background: var(--card); color: var(--text); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+}
+.quick-prompt:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+/* Messages */
+.message {
+  display: flex; flex-direction: column; max-width: 80%; animation: slideUp 0.3s ease;
+}
+.message.user { align-items: flex-start; }
+.message.assistant { align-items: flex-end; }
+.message-bubble {
+  padding: 12px 18px; border-radius: 16px; font-size: 0.92rem; line-height: 1.7;
+  position: relative; word-break: break-word; white-space: pre-wrap;
+}
+.message.user .message-bubble {
+  background: var(--user-bubble); color: #fff; border-bottom-right-radius: 4px;
+}
+.message.assistant .message-bubble {
+  background: var(--card); color: var(--text); border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.message.error .message-bubble {
+  background: var(--card); color: var(--danger); border: 1px solid var(--danger);
+  border-bottom-left-radius: 4px;
+}
+.message-meta {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.7rem; color: var(--text2);
+}
+.copy-btn {
+  padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; background: var(--bg2);
+  color: var(--text2); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
+}
+.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Message images */
+.message-images { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.message-images img, .attach-preview img {
+  max-width: 300px; max-height: 300px; border-radius: 12px; cursor: pointer;
+  transition: transform 0.2s; object-fit: cover;
+}
+.message-images img:hover, .attach-preview img:hover { transform: scale(1.02); }
+.generated-image {
+  max-width: 400px; max-height: 400px; border-radius: 12px; margin: 8px 0;
+}
+
+/* Typing indicator */
+.typing-indicator { display: flex; gap: 4px; padding: 16px 20px; align-items: center; }
+.typing-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text2);
+  animation: typingBounce 1.4s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Input Area */
+.input-area {
+  padding: 16px 20px; background: var(--bg2); border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.attach-preview {
+  display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.attach-item {
+  position: relative; display: inline-block;
+}
+.attach-item .remove-attach {
+  position: absolute; top: -6px; left: -6px; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--danger); color: #fff; border: none;
+  cursor: pointer; font-size: 0.65rem; display: flex; align-items: center;
+  justify-content: center;
+}
+.input-row {
+  display: flex; gap: 10px; align-items: flex-end;
+}
+.input-wrapper {
+  flex: 1; position: relative; background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 14px; transition: border-color 0.2s;
+}
+.input-wrapper:focus-within { border-color: var(--accent); }
+.input-wrapper textarea {
+  width: 100%; padding: 12px 16px; background: transparent; border: none;
+  color: var(--text); font-family: 'Vazirmatn', sans-serif; font-size: 0.9rem;
+  resize: none; outline: none; min-height: 44px; max-height: 150px; line-height: 1.5;
+}
+.input-wrapper textarea::placeholder { color: var(--text2); }
+.input-actions {
+  display: flex; align-items: center; gap: 4px; padding: 6px 10px;
+}
+.send-btn {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--accent);
+  color: #fff; border: none; cursor: pointer; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  flex-shrink: 0;
+}
+.send-btn:hover { opacity: 0.85; transform: scale(1.05); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.attach-btn {
+  width: 34px; height: 34px; border-radius: 8px; background: transparent;
+  color: var(--text2); border: none; cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.attach-btn:hover { color: var(--accent); }
+
+/* Settings Panel */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; }
+.overlay.active { display: block; }
+.settings-panel {
+  position: fixed; top: 0; left: 0; width: min(480px, 95vw); height: 100vh;
+  background: var(--bg2); border-right: 1px solid var(--border); z-index: 201;
+  transform: translateX(-100%); transition: transform 0.3s ease; overflow-y: auto;
+  padding: 24px;
+}
+[dir="rtl"] .settings-panel { left: auto; right: 0; border-right: none; border-left: 1px solid var(--border); transform: translateX(100%); }
+.settings-panel.active { transform: translateX(0); }
+.settings-title {
+  font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; display: flex;
+  align-items: center; justify-content: space-between;
+}
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+  font-size: 0.85rem; font-weight: 600; color: var(--accent); margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 0.82rem; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 10px 14px; background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-family: 'Vazirmatn', sans-serif;
+  font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--accent);
+}
+.form-group textarea { min-height: 80px; resize: vertical; }
+.provider-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.provider-chip {
+  padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
+  background: var(--card); color: var(--text2); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+}
+.provider-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.slider-group { display: flex; align-items: center; gap: 12px; }
+.slider-group input[type="range"] { flex: 1; accent-color: var(--accent); }
+.slider-value { font-size: 0.82rem; color: var(--accent); font-weight: 600; min-width: 32px; text-align: center; }
+.test-btn {
+  padding: 8px 20px; border-radius: 10px; font-size: 0.82rem; font-weight: 600;
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  transition: all 0.2s; font-family: 'Vazirmatn', sans-serif;
+}
+.test-btn:hover { opacity: 0.85; }
+.test-status { font-size: 0.78rem; margin-top: 8px; padding: 6px 10px; border-radius: 8px; display: none; }
+.test-status.success { display: block; background: rgba(0,184,148,0.1); color: var(--success); }
+.test-status.error { display: block; background: rgba(225,112,85,0.1); color: var(--danger); }
+
+/* Usage Card */
+.usage-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px; margin-bottom: 20px;
+}
+.usage-card h4 { font-size: 0.85rem; margin-bottom: 12px; color: var(--text); }
+.usage-bar {
+  height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-bottom: 8px;
+}
+.usage-fill {
+  height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s;
+}
+.usage-stats { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text2); }
+
+/* Image lightbox */
+.lightbox {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300;
+  align-items: center; justify-content: center; cursor: pointer;
+}
+.lightbox.active { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 12px; }
+
+/* Drag overlay */
+.drag-overlay {
+  display: none; position: absolute; inset: 0; background: rgba(108,92,231,0.15);
+  border: 2px dashed var(--accent); border-radius: 16px; z-index: 50;
+  align-items: center; justify-content: center; font-size: 1.1rem; color: var(--accent);
+  font-weight: 600; pointer-events: none;
+}
+.drag-overlay.active { display: flex; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  html { font-size: 14px; }
+  .header { padding: 10px 14px; }
+  .chat-tabs { padding: 6px 14px; }
+  .messages-container { padding: 14px; }
+  .input-area { padding: 12px 14px; }
+  .message { max-width: 90%; }
+  .quick-prompts { padding: 14px; gap: 6px; }
+  .quick-prompt { font-size: 0.78rem; padding: 6px 14px; }
+  .settings-panel { padding: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">AI Chat Pro <span>فارسی</span></div>
+  <div class="header-right">
+    <span class="provider-badge" id="providerBadge">Gemini</span>
+    <button class="icon-btn" id="themeToggle" title="تغییر تم">🌙</button>
+    <button class="icon-btn" id="settingsBtn" title="تنظیمات">⚙️</button>
+  </div>
+</div>
+
+<!-- Chat Tabs -->
+<div class="chat-tabs" id="chatTabs">
+  <button class="new-chat-btn" id="newChatBtn">+ چت جدید</button>
+</div>
+
+<!-- Main -->
+<div class="main" id="mainArea">
+  <div class="messages-container" id="messagesContainer">
+    <div class="quick-prompts" id="quickPrompts">
+      <button class="quick-prompt" data-prompt="ترجمه کن: ">ترجمه 🌐</button>
+      <button class="quick-prompt" data-prompt="خلاصه کن: ">خلاصه 📝</button>
+      <button class="quick-prompt" data-prompt="توضیح بده: ">توضیح 💡</button>
+      <button class="quick-prompt" data-prompt="این متن رو اصلاح کن: ">اصلاح ✏️</button>
+      <button class="quick-prompt" data-prompt="تصویر بساز: ">تصویر بساز 🎨</button>
+      <button class="quick-prompt" data-prompt="یک سؤال جالب بساز درباره: ">سؤال بساز ❓</button>
+      <button class="quick-prompt" data-prompt="یک مکالمه بنویس بین: ">مکالمه 💬</button>
+      <button class="quick-prompt" data-prompt="تحلیل کن: ">تحلیل 📊</button>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="input-area" id="inputArea">
+    <div class="attach-preview" id="attachPreview"></div>
+    <div class="input-row">
+      <div class="input-wrapper">
+        <textarea id="messageInput" placeholder="پیام خود را بنویسید..." rows="1"></textarea>
+        <div class="input-actions">
+          <button class="attach-btn" id="attachBtn" title="پیوست فایل">📎</button>
+        </div>
+      </div>
+      <button class="send-btn" id="sendBtn" title="ارسال">➤</button>
+    </div>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+  </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="overlay" id="overlay"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-title">
+    <span>تنظیمات</span>
+    <button class="icon-btn" id="closeSettings" style="width:32px;height:32px;font-size:0.9rem">✕</button>
+  </div>
+
+  <div class="settings-section">
+    <h3>ارائه‌دهنده</h3>
+    <div class="provider-chips" id="providerChips">
+      <button class="provider-chip active" data-provider="gemini">Gemini</button>
+      <button class="provider-chip" data-provider="openrouter">OpenRouter</button>
+      <button class="provider-chip" data-provider="groq">Groq</button>
+      <button class="provider-chip" data-provider="cloudflare_img">🎨 تصویرساز</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>کلید API</h3>
+    <div class="form-group">
+      <label>Gemini API Key</label>
+      <input type="password" id="geminiKey" placeholder="AIza...">
+    </div>
+    <div class="form-group">
+      <label>OpenRouter API Key</label>
+      <input type="password" id="openrouterKey" placeholder="sk-or-...">
+    </div>
+    <div class="form-group">
+      <label>Groq API Key</label>
+      <input type="password" id="groqKey" placeholder="gsk_...">
+      <input type="password" id="cloudflare_imgKey" placeholder="کلید API Cloudflare Worker..." style="display:none">
+      <input type="text" id="cloudflare_imgUrl" placeholder="https://your-worker.your-subdomain.workers.dev" style="display:none">
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="cfNote">
+        📌 <a href="https://github.com/saurav-z/free-image-generation-api" target="_blank" style="color:var(--accent)">راهنمای راه‌اندازی</a> — Worker خود را با CORS headers مستقر کنید.
+        کد Worker را با اضافه کردن هدرهای CORS به‌روز کنید:
+        <code style="display:block;margin-top:4px;padding:6px;background:var(--input-bg);border-radius:6px;font-size:.7rem;direction:ltr;text-align:left">'Access-Control-Allow-Origin': '*'</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>مدل</h3>
+    <div class="form-group">
+      <select id="modelSelect"></select>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>پرامپت سیستم</h3>
+    <div class="form-group">
+      <textarea id="systemPrompt" placeholder="دستورالعمل سیستم...">شما یک دستیار هوش مصنوعی مفید و دقیق هستید. به فارسی پاسخ دهید مگر اینکه کاربر زبان دیگری بخواهد.</textarea>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>پارامترها</h3>
+    <div class="form-group">
+      <label>دما (Temperature)</label>
+      <div class="slider-group">
+        <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7">
+        <span class="slider-value" id="tempValue">0.7</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>حداکثر توکن</label>
+      <input type="number" id="maxTokens" value="4096" min="256" max="65536" step="256">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>تست اتصال</h3>
+    <button class="test-btn" id="testBtn">تست اتصال 🔗</button>
+    <button class="test-btn" id="testProxyBtn" style="background:var(--text2);font-size:.75rem">تست پراکسی 🌐</button>
+    <div class="test-status" id="testStatus"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>خروجی</h3>
+    <div style="display:flex;gap:8px;">
+      <button class="test-btn" id="exportTxt" style="background:var(--success)">خروجی TXT 📄</button>
+      <button class="test-btn" id="exportJson" style="background:var(--warning);color:#1a1d2b">خروجی JSON 📦</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>آمار مصرف</h3>
+    <div class="usage-card">
+      <h4>مصرف روزانه</h4>
+      <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width:0%"></div></div>
+      <div class="usage-stats">
+        <span id="usageCount">0 / 250 پیام</span>
+        <span id="usageDate">-</span>
+      </div>
+      <div style="margin-top:12px;font-size:0.78rem;color:var(--text2)" id="providerUsage"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('active')">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+(function() {
+'use strict';
+
+// --- STATE ---
+const DEFAULT_STATE = {
+  provider: 'gemini',
+  model: 'gemini-2.0-flash',
+  apiKeys: { gemini: '', openrouter: '', groq: '', cloudflare_img: '' },
+  cfWorkerUrl: '',
+  systemPrompt: 'شما یک دستیار هوش مصنوعی مفید و دقیق هستید. به فارسی پاسخ دهید مگر اینکه کاربر زبان دیگری بخواهد.',
+  temperature: 0.7,
+  maxTokens: 4096,
+  dailyLimit: 250,
+  dailyUsage: 0,
+  dailyUsageDate: '',
+  theme: 'dark',
+  chats: [],
+  activeChat: null,
+  providerUsageStats: { gemini: 0, openrouter: 0, groq: 0 }
+};
+
+const MODELS = {
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+  openrouter: ['google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3.1', 'anthropic/claude-sonnet-4', 'openai/gpt-oss-20b:free'],
+  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+  cloudflare_img: ['stable-diffusion-xl']
+};
+
+const IMAGE_KEYWORDS = ['تصویر', 'عکس', 'نقاشی', 'generate image', 'create image', 'draw', 'paint', 'تصویر بساز', 'عکس بساز', 'بکش'];
+
+let state = {};
+let abortController = null;
+let isGenerating = false;
+
+// --- DOM ---
+const $ = id => document.getElementById(id);
+const messagesContainer = $('messagesContainer');
+const messageInput = $('messageInput');
+const sendBtn = $('sendBtn');
+const chatTabs = $('chatTabs');
+const quickPrompts = $('quickPrompts');
+const attachPreview = $('attachPreview');
+const settingsPanel = $('settingsPanel');
+const overlay = $('overlay');
+const lightbox = $('lightbox');
+const lightboxImg = $('lightboxImg');
+
+// --- PERSISTENCE ---
+function loadState() {
+  try {
+    const saved = localStorage.getItem('ai_chat_pro');
+    state = saved ? { ...DEFAULT_STATE, ...JSON.parse(saved) } : { ...DEFAULT_STATE };
+    if (!state.apiKeys) state.apiKeys = { gemini: '', openrouter: '', groq: '' };
+    if (!state.providerUsageStats) state.providerUsageStats = { gemini: 0, openrouter: 0, groq: 0 };
+  } catch { state = { ...DEFAULT_STATE }; }
+  checkDailyReset();
+}
+
+function saveState() {
+  try { localStorage.setItem('ai_chat_pro', JSON.stringify(state)); } catch {}
+}
+
+function checkDailyReset() {
+  const today = new Date().toISOString().split('T')[0];
+  if (state.dailyUsageDate !== today) {
+    state.dailyUsage = 0;
+    state.dailyUsageDate = today;
+    saveState();
+  }
+}
+
+// --- THEME ---
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', state.theme);
+  $('themeToggle').textContent = state.theme === 'dark' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  applyTheme();
+  saveState();
+}
+
+// --- CHAT MANAGEMENT ---
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function createChat() {
+  const chat = { id: genId(), title: 'چت جدید', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+  state.chats.unshift(chat);
+  state.activeChat = chat.id;
+  saveState();
+  renderTabs();
+  renderMessages();
+  return chat;
+}
+
+function getActiveChat() {
+  return state.chats.find(c => c.id === state.activeChat);
+}
+
+function deleteChat(e, chatId) {
+  e.stopPropagation();
+  state.chats = state.chats.filter(c => c.id !== chatId);
+  if (state.activeChat === chatId) {
+    state.activeChat = state.chats.length > 0 ? state.chats[0].id : null;
+  }
+  if (state.chats.length === 0) createChat();
+  saveState();
+  renderTabs();
+  renderMessages();
+}
+
+function switchChat(chatId) {
+  state.activeChat = chatId;
+  saveState();
+  renderTabs();
+  renderMessages();
+}
+
+function renderTabs() {
+  const tabs = chatTabs.querySelectorAll('.chat-tab');
+  tabs.forEach(t => t.remove());
+  const btn = $('newChatBtn');
+  state.chats.forEach(chat => {
+    const tab = document.createElement('div');
+    tab.className = 'chat-tab' + (chat.id === state.activeChat ? ' active' : '');
+    tab.innerHTML = `<span class="close-tab" data-id="${chat.id}">✕</span>${escapeHtml(chat.title)}`;
+    tab.addEventListener('click', (e) => {
+      if (e.target.classList.contains('close-tab')) {
+        deleteChat(e, e.target.dataset.id);
+      } else {
+        switchChat(chat.id);
+      }
+    });
+    chatTabs.insertBefore(tab, btn);
+  });
+}
+
+// --- MESSAGES ---
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderMessages() {
+  const chat = getActiveChat();
+  messagesContainer.innerHTML = '';
+  if (!chat || chat.messages.length === 0) {
+    quickPrompts.style.display = 'flex';
+    messagesContainer.appendChild(quickPrompts);
+    return;
+  }
+  quickPrompts.style.display = 'none';
+  chat.messages.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `message ${msg.role}` + (msg.isError ? ' error' : '');
+    let content = '';
+
+    // Images from attachments
+    if (msg.attachments && msg.attachments.length > 0) {
+      content += '<div class="message-images">';
+      msg.attachments.forEach(att => {
+        content += `<img src="${att.data}" alt="پیوست" onclick="showLightbox(this.src)">`;
+      });
+      content += '</div>';
+    }
+
+    // Image data (generated)
+    if (msg.imageData) {
+      content += `<img class="generated-image" src="${msg.imageData}" onclick="showLightbox(this.src)">`;
+    }
+
+    // Text
+    content += `<div class="message-bubble">${formatMessageText(msg.text)}</div>`;
+
+    // Meta
+    content += `<div class="message-meta"><span>${formatTime(msg.timestamp)}</span>`;
+    if (msg.role === 'assistant') {
+      content += `<button class="copy-btn" onclick="copyText(this, '${escapeAttr(msg.text)}')">کپی 📋</button>`;
+    }
+    content += '</div>';
+
+    div.innerHTML = content;
+    messagesContainer.appendChild(div);
+  });
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function formatMessageText(text) {
+  if (!text) return '';
+  // Basic code block formatting
+  let html = escapeHtml(text);
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:var(--bg);padding:12px;border-radius:8px;direction:ltr;text-align:left;overflow-x:auto;margin:8px 0;font-size:0.82rem"><code>$2</code></pre>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:0.85rem;direction:ltr">$1</code>');
+  return html;
+}
+
+function escapeAttr(text) {
+  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+
+// Typing indicator
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'message assistant';
+  div.id = 'typingMsg';
+  div.innerHTML = `<div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  messagesContainer.appendChild(div);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTyping() {
+  const el = $('typingMsg');
+  if (el) el.remove();
+}
+
+// --- QUICK PROMPTS ---
+function initQuickPrompts() {
+  quickPrompts.querySelectorAll('.quick-prompt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      messageInput.value = btn.dataset.prompt;
+      messageInput.focus();
+      autoResize();
+    });
+  });
+}
+
+// --- PROVIDER & MODEL ---
+function updateModelOptions() {
+  const select = $('modelSelect');
+  const models = MODELS[state.provider] || [];
+  select.innerHTML = models.map(m => `<option value="${m}" ${m === state.model ? 'selected' : ''}>${m}</option>`).join('');
+}
+
+function updateProviderBadge() {
+  $('providerBadge').textContent = state.provider.charAt(0).toUpperCase() + state.provider.slice(1);
+}
+
+function initProviderChips() {
+  $('providerChips').querySelectorAll('.provider-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.provider === state.provider);
+    chip.addEventListener('click', () => {
+      state.provider = chip.dataset.provider;
+      state.model = MODELS[state.provider][0];
+      updateModelOptions();
+      updateProviderBadge();
+      initProviderChips();
+      // Show/hide Cloudflare-specific inputs
+      const isCF = state.provider === 'cloudflare_img';
+      const cfKeyEl = $('cloudflare_imgKey');
+      const cfUrlEl = $('cloudflare_imgUrl');
+      if (cfKeyEl) cfKeyEl.style.display = isCF ? 'block' : 'none';
+      if (cfUrlEl) cfUrlEl.style.display = isCF ? 'block' : 'none';
+      // Hide/show model select for CF (only 1 model)
+      const modelRow = $('modelSelect')?.closest('.setting-group');
+      if (modelRow) modelRow.style.display = isCF ? 'none' : '';
+      saveState();
+    });
+  });
+}
+
+// --- SETTINGS ---
+function openSettings() {
+  settingsPanel.classList.add('active');
+  overlay.classList.add('active');
+  $('geminiKey').value = state.apiKeys.gemini;
+  $('openrouterKey').value = state.apiKeys.openrouter;
+  $('groqKey').value = state.apiKeys.groq;
+  $('cloudflare_imgKey').value = state.apiKeys.cloudflare_img;
+  $('cloudflare_imgUrl').value = state.cfWorkerUrl || '';
+  $('systemPrompt').value = state.systemPrompt;
+  $('tempSlider').value = state.temperature;
+  $('tempValue').textContent = state.temperature;
+  $('maxTokens').value = state.maxTokens;
+  updateModelOptions();
+  updateUsageCard();
+}
+
+function closeSettings() {
+  state.apiKeys.gemini = $('geminiKey').value.trim();
+  state.apiKeys.openrouter = $('openrouterKey').value.trim();
+  state.apiKeys.groq = $('groqKey').value.trim();
+  state.apiKeys.cloudflare_img = $('cloudflare_imgKey').value.trim();
+  state.cfWorkerUrl = $('cloudflare_imgUrl').value.trim();
+  state.systemPrompt = $('systemPrompt').value;
+  state.temperature = parseFloat($('tempSlider').value);
+  state.maxTokens = parseInt($('maxTokens').value);
+  state.model = $('modelSelect').value;
+  saveState();
+  settingsPanel.classList.remove('active');
+  overlay.classList.remove('active');
+}
+
+function updateUsageCard() {
+  const pct = Math.min(100, (state.dailyUsage / state.dailyLimit) * 100);
+  $('usageFill').style.width = pct + '%';
+  $('usageFill').style.background = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--accent)';
+  $('usageCount').textContent = `${state.dailyUsage} / ${state.dailyLimit} پیام`;
+  $('usageDate').textContent = state.dailyUsageDate || '-';
+  const stats = state.providerUsageStats || {};
+  $('providerUsage').innerHTML = `Gemini: ${stats.gemini || 0} | OpenRouter: ${stats.openrouter || 0} | Groq: ${stats.groq || 0}`;
+}
+
+// --- CONNECTION TEST ---
+async function testProxies() {
+  const testUrl = 'https://httpbin.org/get';
+  const proxies = [
+    {name:'corsproxy.io', fn: u=>'https://corsproxy.io/?'+encodeURIComponent(u)},
+    {name:'allorigins', fn: u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)},
+    {name:'codetabs', fn: u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)},
+    {name:'corsproxy.org', fn: u=>'https://corsproxy.org/?'+encodeURIComponent(u)},
+    {name:'direct', fn: u=>u}
+  ];
+  const results = [];
+  for (const p of proxies) {
+    try {
+      const r = await fetch(p.fn(testUrl), {signal: AbortSignal.timeout(5000)});
+      results.push(p.name + ': ' + (r.ok ? '✅' : '❌ HTTP ' + r.status));
+    } catch(e) {
+      results.push(p.name + ': ❌ ' + e.message);
+    }
+  }
+  alert('نتایج تست پراکسی:\n\n' + results.join('\n'));
+}
+
+async function testConnection() {
+  const status = $('testStatus');
+  status.className = 'test-status';
+  status.style.display = 'none';
+  status.textContent = 'در حال تست...';
+  status.className = 'test-status success';
+  status.style.display = 'block';
+
+  try {
+    const apiKey = state.apiKeys[state.provider];
+    if (!apiKey) throw new Error('کلید API تنظیم نشده');
+
+    if (state.provider === 'gemini') {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${apiKey}`;
+      const r = await aiFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'سلام' }] }] })
+      });
+      const data = await r.json();
+      if (data.candidates) {
+        status.textContent = '✅ اتصال موفق!';
+        status.className = 'test-status success';
+      } else {
+        throw new Error(JSON.stringify(data.error || data));
+      }
+    } else if (state.provider === 'openrouter') {
+      const r = await aiFetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: state.model, messages: [{ role: 'user', content: 'سلام' }], max_tokens: 10 })
+      });
+      const data = await r.json();
+      if (data.choices) {
+        status.textContent = '✅ اتصال موفق!';
+        status.className = 'test-status success';
+      } else {
+        throw new Error(JSON.stringify(data.error || data));
+      }
+    } else if (state.provider === 'groq') {
+      const r = await aiFetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: state.model, messages: [{ role: 'user', content: 'سلام' }], max_tokens: 10 })
+      });
+      const data = await r.json();
+      if (data.choices) {
+        status.textContent = '✅ اتصال موفق!';
+        status.className = 'test-status success';
+      } else {
+        throw new Error(JSON.stringify(data.error || data));
+      }
+    }
+  } catch (e) {
+    status.textContent = '❌ خطا: ' + e.message;
+    status.className = 'test-status error';
+  }
+}
+
+// --- CORS PROXY ---
+async function aiFetch(url, opts) {
+  const proxies = [
+    u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+    u => 'https://corsproxy.org/?' + encodeURIComponent(u),
+    u => u // direct
+  ];
+  let lastErr;
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const r = await fetch(proxies[i](url), opts);
+      if (r.ok) return r;
+      try {
+        const errBody = await r.json();
+        if (errBody.error || errBody.candidates || errBody.choices) {
+          return { ok: false, json: () => Promise.resolve(errBody), status: r.status };
+        }
+      } catch {}
+      lastErr = new Error('HTTP ' + r.status);
+    } catch (e) {
+      lastErr = e;
+      console.log('[AI] Proxy ' + (i+1) + ' failed:', e.message);
+      continue;
+    }
+  }
+  throw new Error('اتصال برقرار نشد — همه پراکسی‌ها ناموفق بودند. اگر از file:// استفاده می‌کنید، با http://localhost باز کنید.');
+}
+
+// --- IMAGE DETECTION ---
+function detectImageRequest(text) {
+  const lower = text.toLowerCase();
+  return IMAGE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+// --- SEND MESSAGE ---
+async function sendMessage() {
+  const text = messageInput.value.trim();
+  if (!text && pendingAttachments.length === 0) return;
+  if (isGenerating) return;
+
+  // Daily limit check
+  checkDailyReset();
+  if (state.dailyUsage >= state.dailyLimit) {
+    alert('محدودیت روزانه به پایان رسیده! فردا دوباره امتحان کنید.');
+    return;
+  }
+
+  let chat = getActiveChat();
+  if (!chat) chat = createChat();
+
+  // Auto-title from first message
+  if (chat.messages.length === 0) {
+    chat.title = text.slice(0, 40) + (text.length > 40 ? '...' : '');
+    renderTabs();
+  }
+
+  // Build user message
+  const userMsg = {
+    role: 'user',
+    text: text,
+    timestamp: Date.now(),
+    attachments: pendingAttachments.length > 0 ? [...pendingAttachments] : undefined
+  };
+  chat.messages.push(userMsg);
+  chat.updatedAt = Date.now();
+
+  // Clear input
+  messageInput.value = '';
+  autoResize();
+  clearAttachments();
+  saveState();
+  renderMessages();
+
+  // Check API key
+  const apiKey = state.apiKeys[state.provider];
+  if (!apiKey) {
+    const errMsg = { role: 'assistant', text: '❌ لطفاً ابتدا کلید API را در تنظیمات وارد کنید.', timestamp: Date.now(), isError: true };
+    chat.messages.push(errMsg);
+    saveState();
+    renderMessages();
+    return;
+  }
+
+  // Generate
+  isGenerating = true;
+  sendBtn.disabled = true;
+  showTyping();
+
+  try {
+    const wantsImage = detectImageRequest(text);
+    const response = await callAPI(chat, wantsImage);
+    hideTyping();
+
+    const assistantMsg = {
+      role: 'assistant',
+      text: response.text || '',
+      timestamp: Date.now(),
+      imageData: response.imageData || undefined
+    };
+    chat.messages.push(assistantMsg);
+    chat.updatedAt = Date.now();
+    state.dailyUsage++;
+    state.providerUsageStats[state.provider] = (state.providerUsageStats[state.provider] || 0) + 1;
+    saveState();
+    renderMessages();
+  } catch (e) {
+    hideTyping();
+    const errMsg = { role: 'assistant', text: '❌ خطا: ' + e.message, timestamp: Date.now(), isError: true };
+    chat.messages.push(errMsg);
+    saveState();
+    renderMessages();
+  } finally {
+    isGenerating = false;
+    sendBtn.disabled = false;
+  }
+}
+
+// --- API CALLS ---
+async function callAPI(chat, wantsImage) {
+  if (state.provider === 'gemini') return callGemini(chat, wantsImage);
+  if (state.provider === 'openrouter') return callOpenRouter(chat);
+  if (state.provider === 'groq') return callGroq(chat);
+  if (state.provider === 'cloudflare_img') return callCloudflareImg(chat);
+  throw new Error('ارائه‌دهنده نامعتبر');
+}
+
+async function callGemini(chat, wantsImage) {
+  const apiKey = state.apiKeys.gemini;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${apiKey}`;
+
+  // Build contents
+  const contents = [];
+  if (state.systemPrompt) {
+    contents.push({ role: 'user', parts: [{ text: state.systemPrompt }] });
+    contents.push({ role: 'model', parts: [{ text: 'بله، متوجه شدم. آماده‌ام کمک کنم.' }] });
+  }
+
+  chat.messages.forEach(msg => {
+    const parts = [];
+    if (msg.attachments && msg.attachments.length > 0) {
+      msg.attachments.forEach(att => {
+        const base64 = att.data.split(',')[1];
+        parts.push({ inlineData: { mimeType: att.type || 'image/png', data: base64 } });
+      });
+    }
+    if (msg.text) parts.push({ text: msg.text });
+    if (parts.length > 0) {
+      contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts });
+    }
+  });
+
+  const body = {
+    contents,
+    generationConfig: {
+      temperature: state.temperature,
+      maxOutputTokens: state.maxTokens
+    }
+  };
+
+  if (wantsImage && state.model.includes('gemini')) {
+    body.generationConfig.responseModalities = ['TEXT', 'IMAGE'];
+  }
+
+  const r = await aiFetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await r.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error(data.error?.message || 'پاسخی دریافت نشد');
+  }
+
+  const parts = data.candidates[0].content?.parts || [];
+  let text = '';
+  let imageData = null;
+
+  for (const part of parts) {
+    if (part.text) text += part.text;
+    if (part.inlineData) {
+      imageData = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }
+  }
+
+  return { text, imageData };
+}
+
+async function callOpenRouter(chat) {
+  const apiKey = state.apiKeys.openrouter;
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+
+  const messages = [];
+  if (state.systemPrompt) messages.push({ role: 'system', content: state.systemPrompt });
+
+  chat.messages.forEach(msg => {
+    if (msg.role === 'user' && msg.attachments && msg.attachments.length > 0) {
+      const content = [];
+      msg.attachments.forEach(att => {
+        content.push({ type: 'image_url', image_url: { url: att.data } });
+      });
+      if (msg.text) content.push({ type: 'text', text: msg.text });
+      messages.push({ role: 'user', content });
+    } else {
+      messages.push({ role: msg.role, content: msg.text });
+    }
+  });
+
+  const r = await aiFetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.href,
+      'X-Title': 'AI Chat Pro'
+    },
+    body: JSON.stringify({
+      model: state.model,
+      messages,
+      temperature: state.temperature,
+      max_tokens: state.maxTokens
+    })
+  });
+  const data = await r.json();
+
+  if (!data.choices || data.choices.length === 0) {
+    throw new Error(data.error?.message || 'پاسخی دریافت نشد');
+  }
+
+  return { text: data.choices[0].message?.content || '' };
+}
+
+async function callGroq(chat) {
+  const apiKey = state.apiKeys.groq;
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+
+  const messages = [];
+  if (state.systemPrompt) messages.push({ role: 'system', content: state.systemPrompt });
+
+  chat.messages.forEach(msg => {
+    messages.push({ role: msg.role, content: msg.text });
+  });
+
+  const r = await aiFetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: state.model,
+      messages,
+      temperature: state.temperature,
+      max_tokens: state.maxTokens
+    })
+  });
+  const data = await r.json();
+
+  if (!data.choices || data.choices.length === 0) {
+    throw new Error(data.error?.message || 'پاسخی دریافت نشد');
+  }
+
+  return { text: data.choices[0].message?.content || '' };
+}
+
+async function callCloudflareImg(chat) {
+  const apiKey = state.apiKeys.cloudflare_img;
+  const workerUrl = state.cfWorkerUrl;
+  if (!workerUrl) throw new Error('آدرس Worker Cloudflare را وارد کنید');
+
+  // Get the last user message as the prompt
+  const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+  const prompt = lastUserMsg?.text || 'A beautiful landscape';
+
+  const r = await aiFetch(workerUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': '***' + apiKey
+    },
+    body: JSON.stringify({ prompt })
+  });
+
+  if (!r.ok) {
+    let errMsg = 'خطای سرور';
+    try { const d = await r.json(); errMsg = d.error || errMsg; } catch {}
+    throw new Error(errMsg);
+  }
+
+  const blob = await r.blob();
+  const base64 = await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(blob);
+  });
+
+  return {
+    text: '🎨 تصویر تولید شده بر اساس: "' + prompt + '"',
+    imageData: { mimeType: 'image/jpeg', data: base64 }
+  };
+}
+
+// --- ATTACHMENTS ---
+let pendingAttachments = [];
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingAttachments.push({ data: e.target.result, type: file.type, name: file.name });
+      renderAttachments();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderAttachments() {
+  attachPreview.innerHTML = '';
+  pendingAttachments.forEach((att, i) => {
+    const div = document.createElement('div');
+    div.className = 'attach-item';
+    div.innerHTML = `<img src="${att.data}" style="width:60px;height:60px;object-fit:cover;border-radius:8px"><button class="remove-attach" data-idx="${i}">✕</button>`;
+    div.querySelector('.remove-attach').addEventListener('click', () => {
+      pendingAttachments.splice(i, 1);
+      renderAttachments();
+    });
+    attachPreview.appendChild(div);
+  });
+}
+
+function clearAttachments() {
+  pendingAttachments = [];
+  attachPreview.innerHTML = '';
+}
+
+// --- AUTO RESIZE TEXTAREA ---
+function autoResize() {
+  messageInput.style.height = 'auto';
+  messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
+}
+
+// --- EXPORT ---
+function exportTxt() {
+  const chat = getActiveChat();
+  if (!chat) return;
+  let text = `عنوان: ${chat.title}\nتاریخ: ${new Date(chat.createdAt).toLocaleString('fa-IR')}\n${'='.repeat(50)}\n\n`;
+  chat.messages.forEach(msg => {
+    const label = msg.role === 'user' ? '👤 کاربر' : '🤖 دستیار';
+    text += `${label} [${formatTime(msg.timestamp)}]:\n${msg.text}\n\n`;
+  });
+  downloadFile(text, `chat-${chat.id}.txt`, 'text/plain');
+}
+
+function exportJson() {
+  const chat = getActiveChat();
+  if (!chat) return;
+  const json = JSON.stringify(chat, null, 2);
+  downloadFile(json, `chat-${chat.id}.json`, 'application/json');
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// --- LIGHTBOX ---
+window.showLightbox = function(src) {
+  lightboxImg.src = src;
+  lightbox.classList.add('active');
+};
+
+// --- COPY ---
+window.copyText = function(btn, text) {
+  const decoded = text.replace(/\\n/g, '\n').replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+  navigator.clipboard.writeText(decoded).then(() => {
+    btn.textContent = 'کپی شد ✅';
+    setTimeout(() => { btn.textContent = 'کپی 📋'; }, 1500);
+  });
+};
+
+// --- INIT ---
+function init() {
+  loadState();
+  applyTheme();
+  updateModelOptions();
+  updateProviderBadge();
+  initProviderChips();
+  initQuickPrompts();
+
+  // Ensure active chat
+  if (!state.activeChat || !state.chats.find(c => c.id === state.activeChat)) {
+    if (state.chats.length > 0) state.activeChat = state.chats[0].id;
+    else createChat();
+  }
+  renderTabs();
+  renderMessages();
+
+  // Event listeners
+  sendBtn.addEventListener('click', sendMessage);
+  messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  messageInput.addEventListener('input', autoResize);
+  $('newChatBtn').addEventListener('click', () => { createChat(); });
+  $('themeToggle').addEventListener('click', toggleTheme);
+  $('settingsBtn').addEventListener('click', openSettings);
+  $('closeSettings').addEventListener('click', closeSettings);
+  overlay.addEventListener('click', closeSettings);
+  $('testBtn').addEventListener('click', testConnection);
+  $('testProxyBtn').addEventListener('click', testProxies);
+  $('exportTxt').addEventListener('click', exportTxt);
+  $('exportJson').addEventListener('click', exportJson);
+  $('attachBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
+  $('tempSlider').addEventListener('input', (e) => { $('tempValue').textContent = e.target.value; });
+  $('modelSelect').addEventListener('change', (e) => { state.model = e.target.value; saveState(); });
+
+  // Paste images
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleFiles([item.getAsFile()]);
+        break;
+      }
+    }
+  });
+
+  // Drag and drop
+  const mainArea = $('mainArea');
+  let dragCounter = 0;
+  mainArea.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; });
+  mainArea.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if (dragCounter <= 0) dragCounter = 0; });
+  mainArea.addEventListener('dragover', (e) => e.preventDefault());
+  mainArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+  });
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (lightbox.classList.contains('active')) lightbox.classList.remove('active');
+      else if (settingsPanel.classList.contains('active')) closeSettings();
+    }
+  });
+}
+
+init();
+})();
+</script>
+</body>
+</html>
