@@ -783,8 +783,10 @@ async function testConnection() {
     if (!apiKey && state.provider !== 'puter_img') throw new Error('کلید API تنظیم نشده');
 
     if (state.provider === 'puter_img') {
-      // Test Puter.js image generation
-      const img = await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-1-mini' });
+      if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
+        throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
+      }
+      await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-2' });
       status.textContent = '✅ اتصال موفق! تصویر تست تولید شد.';
       status.className = 'test-status success';
       return;
@@ -1105,10 +1107,13 @@ async function callGroq(chat) {
 }
 
 async function callPuterImg(chat) {
+  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
+    throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
+  }
+
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
   const prompt = lastUserMsg?.text || 'A beautiful landscape';
 
-  // Map model names to Puter.js provider/model options
   const modelMap = {
     'gpt-image-2': { provider: 'openai-image-generation', model: 'gpt-image-2' },
     'flux-2-pro': { provider: 'replicate-image-generation', model: 'black-forest-labs/flux-2-pro' },
@@ -1117,24 +1122,44 @@ async function callPuterImg(chat) {
   };
   const opts = modelMap[state.model] || modelMap['gpt-image-2'];
 
-  // Use Puter.js txt2img API
   const imgElement = await puter.ai.txt2img(prompt, {
     provider: opts.provider,
     model: opts.model
   });
 
-  // Convert the returned image element to base64
-  const canvas = document.createElement('canvas');
-  canvas.width = imgElement.naturalWidth || imgElement.width;
-  canvas.height = imgElement.naturalHeight || imgElement.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(imgElement, 0, 0);
-  const dataUrl = canvas.toDataURL('image/png');
+  let dataUrl;
+
+  // If already a data: or blob: URL, use it directly
+  if (imgElement.src && (imgElement.src.startsWith('data:') || imgElement.src.startsWith('blob:'))) {
+    dataUrl = imgElement.src;
+  } else {
+    // Try canvas first, fall back to fetch for cross-origin images
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = imgElement.naturalWidth || imgElement.width;
+      canvas.height = imgElement.naturalHeight || imgElement.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgElement, 0, 0);
+      dataUrl = canvas.toDataURL('image/png');
+    } catch (e) {
+      // CORS tainted canvas — use fetch to get the blob instead
+      const resp = await fetch(imgElement.src);
+      const blob = await resp.blob();
+      dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+  }
+
   const base64 = dataUrl.split(',')[1];
+  const mimeType = (dataUrl.split(';')[0].split(':')[1]) || 'image/png';
 
   return {
     text: '🎨 تصویر تولید شده: "' + prompt + '"',
-    imageData: { mimeType: 'image/png', data: base64 }
+    imageData: { mimeType, data: base64 }
   };
 }
 
