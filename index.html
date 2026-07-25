@@ -313,6 +313,9 @@ body {
   .attach-btn { width: 32px; height: 32px; }
   .input-wrapper textarea { font-size: 16px; /* Prevent iOS zoom */ padding: 10px 14px; }
   .provider-badge { font-size: 0.7rem; padding: 3px 8px; }
+  .quick-switch { padding: 4px 8px; gap: 4px; }
+  .quick-switch-btn { font-size: 0.68rem; padding: 3px 8px; }
+  .image-attached-bar { font-size: 0.72rem; padding: 6px 10px; }
 
   /* Fix mobile keyboard pushing input out of view */
   .main { flex: 1; min-height: 0; overflow: hidden; }
@@ -326,6 +329,54 @@ body {
   .quick-prompt { font-size: 0.7rem; padding: 5px 10px; }
   .chat-tab { padding: 5px 10px; font-size: 0.75rem; max-width: 120px; }
 }
+
+/* Quick Provider Switch Bar */
+.quick-switch {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  background: var(--bg); border-top: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+}
+.quick-switch::-webkit-scrollbar { display: none; }
+.quick-switch-btn {
+  padding: 4px 12px; border-radius: 14px; font-size: 0.72rem; font-weight: 500;
+  background: var(--card); color: var(--text2); border: 1px solid var(--border);
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.quick-switch-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.quick-switch-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+/* Image attached indicator */
+.image-attached-bar {
+  display: none; align-items: center; gap: 8px; padding: 8px 12px;
+  background: rgba(108,92,231,0.1); border: 1px solid var(--accent);
+  border-radius: 10px; margin-bottom: 8px; font-size: 0.78rem; color: var(--accent);
+}
+.image-attached-bar.active { display: flex; }
+.image-attached-bar button {
+  padding: 3px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 600;
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+}
+
+/* Help Panel */
+.help-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
+.help-overlay.active { display: flex; }
+.help-panel {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+  width: min(520px, 95vw); max-height: 85vh; overflow-y: auto; padding: 24px;
+  animation: slideUp 0.3s ease;
+}
+.help-panel h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.help-panel h3 { font-size: 0.9rem; color: var(--text); margin: 16px 0 8px; }
+.help-panel p, .help-panel li { font-size: 0.82rem; color: var(--text2); line-height: 1.8; }
+.help-panel ul { padding-right: 20px; }
+.help-panel li { margin-bottom: 4px; }
+.help-close {
+  position: sticky; top: 0; float: left; background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; width: 30px; height: 30px; cursor: pointer; color: var(--text);
+  font-size: 0.9rem; display: flex; align-items: center; justify-content: center;
+}
+.help-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.help-section .emoji { font-size: 1.3rem; margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -335,6 +386,7 @@ body {
   <div class="logo">AI Chat Pro <span>فارسی</span></div>
   <div class="header-right">
     <span class="provider-badge" id="providerBadge">Gemini</span>
+    <button class="icon-btn" id="helpBtn" title="راهنما">❓</button>
     <button class="icon-btn" id="themeToggle" title="تغییر تم">🌙</button>
     <button class="icon-btn" id="settingsBtn" title="تنظیمات">⚙️</button>
   </div>
@@ -361,8 +413,19 @@ body {
     </div>
   </div>
 
+  <!-- Quick Provider Switch -->
+  <div class="quick-switch" id="quickSwitch">
+    <button class="quick-switch-btn active" data-provider="gemini">Gemini</button>
+    <button class="quick-switch-btn" data-provider="openrouter">OpenRouter</button>
+    <button class="quick-switch-btn" data-provider="groq">Groq</button>
+    <button class="quick-switch-btn" data-provider="pollinations">🎨 Pollinations</button>
+  </div>
+
   <!-- Input Area -->
   <div class="input-area" id="inputArea">
+    <div class="image-attached-bar" id="imageAttachedBar">
+      🖼️ عکس ضمیمه شد — برای ویرایش، <button id="switchToEditBtn">✏️ سوییچ به Pollinations</button> بزنید
+    </div>
     <div class="attach-preview" id="attachPreview"></div>
     <div class="input-row">
       <div class="input-wrapper">
@@ -491,6 +554,80 @@ body {
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('active')">
   <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Help Panel -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-panel">
+    <button class="help-close" id="closeHelp">✕</button>
+    <h2>❓ راهنمای AI Chat Pro</h2>
+
+    <div class="help-section">
+      <h3><span class="emoji">💬</span> چت متنی</h3>
+      <ul>
+        <li>پیامت رو بنویس و ➤ بزن یا Enter بزن</li>
+        <li>از <b>پرامپت‌های سریع</b> پایین صفحه استفاده کن</li>
+        <li>هر provider مدل‌های خودش رو داره</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">🎨</span> تولید تصویر</h3>
+      <ul>
+        <li>Provider رو روی <b>Pollinations</b> بذار</li>
+        <li>پرامپت بنویس: مثلاً «یک گربه با عینک آفتابی»</li>
+        <li>بدون API key کار میکنه! ✅</li>
+        <li>مدل‌های خوب: <code>flux</code>، <code>flux-realism</code>، <code>flux-anime</code></li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">✏️</span> ویرایش تصویر</h3>
+      <ul>
+        <li>اول عکس رو ضمیمه کن (📎 یا Ctrl+V)</li>
+        <li>Provider رو <b>Pollinations</b> کن</li>
+        <li>مدل <code>kontext</code> یا <code>nanobanana-2</code> رو انتخاب کن</li>
+        <li>پرامپت ویرایش رو بنویس: «پس‌زمینه رو ساحل کن»</li>
+        <li>⚠️ ویرایش دقیق‌تر با API key کار میکنه</li>
+        <li>🔗 رایگان از <a href="https://enter.pollinations.ai/keys" target="_blank" style="color:var(--accent)">enter.pollinations.ai</a></li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">🖼️</span> ویرایش با Gemini (رایگان)</h3>
+      <ul>
+        <li>🔑 API key از <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> بگیر</li>
+        <li>مدل <code>gemini-2.5-flash</code> یا <code>gemini-3.1-flash-image</code> انتخاب کن</li>
+        <li>عکس ضمیمه + پرامپت بنویس</li>
+        <li>خودکار تصویر ویرایش‌شده برمیگرده ✅</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">📋</span> ضمیمه عکس</h3>
+      <ul>
+        <li>📎 دکمه پیوست</li>
+        <li><b>Ctrl+V</b> پیست از کلیپ‌بورد</li>
+        <li><b>Drag & Drop</b> کشیدن عکس به صفحه</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">⚡</span> سوییچ سریع</h3>
+      <ul>
+        <li>از نوار پایین صفحه بین provider‌ها سوییچ کن</li>
+        <li>وقتی عکس ضمیمه کنی، پیام سوییچ خودکار نشون داده میشه</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3><span class="emoji">📤</span> خروجی</h3>
+      <ul>
+        <li>از تنظیمات: خروجی TXT یا JSON از چت‌ها</li>
+        <li>دکمه کپی روی هر پیام</li>
+      </ul>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1660,7 +1797,74 @@ function init() {
     if (e.key === 'Escape') {
       if (lightbox.classList.contains('active')) lightbox.classList.remove('active');
       else if (settingsPanel.classList.contains('active')) closeSettings();
+      else if ($('helpOverlay').classList.contains('active')) $('helpOverlay').classList.remove('active');
     }
+  });
+
+  // --- QUICK PROVIDER SWITCH ---
+  function updateQuickSwitch() {
+    document.querySelectorAll('.quick-switch-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.provider === state.provider);
+    });
+  }
+  updateQuickSwitch();
+
+  document.querySelectorAll('.quick-switch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.provider = btn.dataset.provider;
+      state.model = MODELS[state.provider][0];
+      updateModelOptions();
+      updateProviderBadge();
+      initProviderChips();
+      updateQuickSwitch();
+      saveState();
+    });
+  });
+
+  // --- IMAGE ATTACHED DETECTION ---
+  const origHandleFiles = window.handleFiles || handleFiles;
+  function checkImageAttached() {
+    const bar = $('imageAttachedBar');
+    if (pendingAttachments.length > 0 && state.provider !== 'pollinations') {
+      bar.classList.add('active');
+    } else {
+      bar.classList.remove('active');
+    }
+  }
+
+  // Patch handleFiles to check for image attached
+  const _origRenderAttachments = renderAttachments;
+  window.renderAttachments = function() {
+    _origRenderAttachments();
+    checkImageAttached();
+  };
+
+  $('switchToEditBtn').addEventListener('click', () => {
+    state.provider = 'pollinations';
+    state.model = 'kontext';
+    updateModelOptions();
+    updateProviderBadge();
+    initProviderChips();
+    updateQuickSwitch();
+    saveState();
+    checkImageAttached();
+    // Show feedback
+    const toast = document.createElement('div');
+    toast.textContent = '✏️ سوییچ به Pollinations + kontext';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-size:0.82rem;z-index:999;animation:fadeIn 0.3s;';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  });
+
+  // --- HELP PANEL ---
+  $('helpBtn').addEventListener('click', () => {
+    $('helpOverlay').classList.add('active');
+  });
+  $('closeHelp').addEventListener('click', () => {
+    $('helpOverlay').classList.remove('active');
+  });
+  $('helpOverlay').addEventListener('click', (e) => {
+    if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('active');
   });
 }
 
