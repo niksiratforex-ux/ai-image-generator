@@ -326,6 +326,7 @@ body {
       <button class="quick-prompt" data-prompt="توضیح بده: ">توضیح 💡</button>
       <button class="quick-prompt" data-prompt="این متن رو اصلاح کن: ">اصلاح ✏️</button>
       <button class="quick-prompt" data-prompt="تصویر بساز: ">تصویر بساز 🎨</button>
+      <button class="quick-prompt" data-prompt="این عکس رو ویرایش کن: ">ویرایش عکس ✏️</button>
       <button class="quick-prompt" data-prompt="یک سؤال جالب بساز درباره: ">سؤال بساز ❓</button>
       <button class="quick-prompt" data-prompt="یک مکالمه بنویس بین: ">مکالمه 💬</button>
       <button class="quick-prompt" data-prompt="تحلیل کن: ">تحلیل 📊</button>
@@ -385,7 +386,7 @@ body {
         مدل‌ها: GPT Image, FLUX.2, Stable Diffusion 3, Grok Imagine
       </div>
       <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="pollinationsNote">
-        🆓 رایگان و بدون نیاز به API key یا ثبت‌نام! مدل‌ها: FLUX، FLUX Anime، FLUX 3D، Turbo
+        🆓 رایگان و بدون نیاز به API key یا ثبت‌نام!\n\n🎨 تولید تصویر: flux، flux-realism، flux-anime، flux-3d، turbo\n✏️ ویرایش تصویر: kontext، nanobanana، seedream (عکس بفرست + پرامپت بنویس)
       </div>
     </div>
   </div>
@@ -521,11 +522,11 @@ const MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   openrouter: ['google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3.1', 'anthropic/claude-sonnet-4', 'openai/gpt-oss-20b:free'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-  pollinations: ['flux', 'flux-realism', 'flux-anime', 'flux-3d', 'flux-cablyai', 'turbo'],
+  pollinations: ['flux', 'flux-realism', 'flux-anime', 'flux-3d', 'turbo', 'kontext', 'nanobanana', 'seedream'],
   puter_img: ['gpt-image-2', 'flux-2-pro', 'stable-diffusion-3', 'grok-imagine-image']
 };
 
-const IMAGE_KEYWORDS = ['تصویر', 'عکس', 'نقاشی', 'generate image', 'create image', 'draw', 'paint', 'تصویر بساز', 'عکس بساز', 'بکش'];
+const IMAGE_KEYWORDS = ['تصویر', 'عکس', 'نقاشی', 'generate image', 'create image', 'draw', 'paint', 'تصویر بساز', 'عکس بساز', 'بکش', 'ویرایش عکس', 'ویرایش تصویر', 'edit image', 'edit photo'];
 
 let state = {};
 let abortController = null;
@@ -1205,16 +1206,56 @@ async function callGroq(chat) {
 }
 
 // --- POLLINATIONS (Free, no API key) ---
+// Edit models that accept image input
+const POLLINATIONS_EDIT_MODELS = ['kontext', 'nanobanana', 'seedream'];
+
 async function callPollinations(chat) {
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
   const prompt = lastUserMsg?.text || 'A beautiful landscape';
   const model = state.model || 'flux';
+  const isEditModel = POLLINATIONS_EDIT_MODELS.includes(model);
+  const hasImage = lastUserMsg?.attachments && lastUserMsg.attachments.length > 0;
 
-  // image.pollinations.ai is a simple GET endpoint that returns a JPEG
+  // If user attached an image and model supports editing
+  if (hasImage && (isEditModel || model === 'flux')) {
+    const editModel = isEditModel ? model : 'kontext';
+    const imgData = lastUserMsg.attachments[0].data; // base64 data URI
+
+    // POST to image.pollinations.ai with base64 image
+    const encodedPrompt = encodeURIComponent(prompt);
+    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${editModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: imgData,
+        model: editModel,
+        prompt: prompt,
+        width: 1024,
+        height: 1024,
+        nologo: true
+      })
+    });
+
+    if (!response.ok) throw new Error('ویرایش تصویر ناموفق بود (HTTP ' + response.status + ')');
+
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve({
+        text: '✏️ تصویر ویرایش شده با Pollinations (' + editModel + '): "' + prompt + '"',
+        imageData: reader.result
+      });
+      reader.onerror = () => reject(new Error('تبدیل تصویر ناموفق بود'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Regular text-to-image generation
   const encodedPrompt = encodeURIComponent(prompt);
   const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=${model}&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
 
-  // Fetch the image and convert to base64
   const response = await fetch(imgUrl);
   if (!response.ok) throw new Error('تولید تصویر ناموفق بود (HTTP ' + response.status + ')');
 
