@@ -418,6 +418,13 @@ body {
         🆓 رایگان و بدون نیاز به API key یا ثبت‌نام!\n\n🎨 تولید تصویر: flux، flux-realism، flux-anime، flux-3d، turbo\n✏️ ویرایش تصویر: kontext، nanobanana، seedream (عکس بفرست + پرامپت بنویس)
       </div>
     </div>
+    <div class="form-group">
+      <label>Pollinations API Key <span style="font-size:0.7rem;color:var(--text2)">(اختیاری — برای ویرایش تصویر)</span></label>
+      <input type="password" id="pollinationsKey" placeholder="pk_... یا بدون key برای تولید">
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px">
+        🔗 <a href="https://enter.pollinations.ai/keys" target="_blank" style="color:var(--accent)">دریافت رایگان از enter.pollinations.ai</a> — ویرایش تصویر با کلید دقیق‌تر کار می‌کنه
+      </div>
+    </div>
   </div>
 
   <div class="settings-section">
@@ -533,8 +540,8 @@ function loadPuterScript() {
 // --- STATE ---
 const DEFAULT_STATE = {
   provider: 'gemini',
-  model: 'gemini-2.0-flash',
-  apiKeys: { gemini: '', openrouter: '', groq: '' },
+  model: 'gemini-2.5-flash',
+  apiKeys: { gemini: '', openrouter: '', groq: '', pollinations: '' },
   systemPrompt: 'شما یک دستیار هوش مصنوعی مفید و دقیق هستید. به فارسی پاسخ دهید مگر اینکه کاربر زبان دیگری بخواهد.',
   temperature: 0.7,
   maxTokens: 4096,
@@ -548,7 +555,7 @@ const DEFAULT_STATE = {
 };
 
 const MODELS = {
-  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-pro-image-preview', 'gemini-3.1-flash-image'],
   openrouter: ['google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3.1', 'anthropic/claude-sonnet-4', 'openai/gpt-oss-20b:free'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
   pollinations: ['flux', 'flux-realism', 'flux-anime', 'flux-3d', 'turbo', 'kontext', 'nanobanana', 'seedream'],
@@ -579,7 +586,7 @@ function loadState() {
   try {
     const saved = localStorage.getItem('ai_chat_pro');
     state = saved ? { ...DEFAULT_STATE, ...JSON.parse(saved) } : { ...DEFAULT_STATE };
-    if (!state.apiKeys) state.apiKeys = { gemini: '', openrouter: '', groq: '' };
+    if (!state.apiKeys) state.apiKeys = { gemini: '', openrouter: '', groq: '', pollinations: '' };
     if (!state.providerUsageStats) state.providerUsageStats = { gemini: 0, openrouter: 0, groq: 0, pollinations: 0 };
   } catch { state = { ...DEFAULT_STATE }; }
   checkDailyReset();
@@ -805,6 +812,7 @@ function openSettings() {
   $('geminiKey').value = state.apiKeys.gemini;
   $('openrouterKey').value = state.apiKeys.openrouter;
   $('groqKey').value = state.apiKeys.groq;
+  $('pollinationsKey').value = state.apiKeys.pollinations || '';
   $('systemPrompt').value = state.systemPrompt;
   $('tempSlider').value = state.temperature;
   $('tempValue').textContent = state.temperature;
@@ -817,6 +825,7 @@ function saveSettingsInputs() {
   state.apiKeys.gemini = $('geminiKey').value.trim();
   state.apiKeys.openrouter = $('openrouterKey').value.trim();
   state.apiKeys.groq = $('groqKey').value.trim();
+  state.apiKeys.pollinations = $('pollinationsKey').value.trim();
   state.systemPrompt = $('systemPrompt').value;
   state.temperature = parseFloat($('tempSlider').value);
   state.maxTokens = parseInt($('maxTokens').value);
@@ -882,7 +891,24 @@ async function testConnection() {
         const testUrl = 'https://image.pollinations.ai/prompt/a%20cute%20cat?width=256&height=256&nologo=true';
         const r = await fetch(testUrl);
         if (r.ok) {
-          status.textContent = '✅ اتصال موفق! Pollinations رایگان و بدون نیاز به API key کار می‌کنه.';
+          let msg = '✅ اتصال موفق! تولید تصویر رایگان کار می‌کنه.';
+          // Test API key if provided
+          const pollKey = state.apiKeys?.pollinations || '';
+          if (pollKey) {
+            try {
+              const modelsR = await fetch('https://gen.pollinations.ai/v1/models', {
+                headers: { 'Authorization': 'Bearer ' + pollKey }
+              });
+              if (modelsR.ok) {
+                msg += '\n✅ API key معتبره — ویرایش تصویر هم فعاله.';
+              } else {
+                msg += '\n⚠️ API key نامعتبره — فقط تولید تصویر کار می‌کنه.';
+              }
+            } catch {}
+          } else {
+            msg += '\n💡 برای ویرایش تصویر، API key وارد کنید.';
+          }
+          status.textContent = msg;
           status.className = 'test-status success';
         } else {
           throw new Error('HTTP ' + r.status);
@@ -990,6 +1016,11 @@ async function aiFetch(url, opts) {
 function detectImageRequest(text) {
   const lower = text.toLowerCase();
   return IMAGE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function hasImageAttachment(chat) {
+  const lastMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+  return lastMsg?.attachments && lastMsg.attachments.length > 0;
 }
 
 // --- SEND MESSAGE ---
@@ -1124,8 +1155,12 @@ async function callGemini(chat, wantsImage) {
     }
   };
 
-  if (wantsImage && (state.model.includes('gemini-2.0') || state.model.includes('gemini-2.5'))) {
-    body.generationConfig.responseModalities = ['TEXT', 'IMAGE'];
+  // All current Gemini models support image output
+  const supportsImage = state.model.includes('gemini-2.5') || state.model.includes('gemini-3') || state.model.includes('image');
+  if (wantsImage || hasImageAttachment(chat)) {
+    if (supportsImage) {
+      body.generationConfig.responseModalities = ['TEXT', 'IMAGE'];
+    }
   }
 
   // Use native system instruction for Gemini
@@ -1142,7 +1177,6 @@ async function callGemini(chat, wantsImage) {
 
   if (!data.candidates || data.candidates.length === 0) {
     const errMsg = data.error?.message || 'پاسخی دریافت نشد (HTTP ' + (r.status || '?') + ')';
-    // Detect rate limit / quota errors
     if (data.error?.status === 'RESOURCE_EXHAUSTED' || r.status === 429 || errMsg.includes('429') || errMsg.includes('quota')) {
       throw new Error('⚠️ محدودیت رایگان Gemini تمام شد. راه‌حل:\n' +
         '۱. کلید API جدید از aistudio.google.com بسازید\n' +
@@ -1243,9 +1277,9 @@ async function callGroq(chat) {
   return { text: data.choices[0].message?.content || '' };
 }
 
-// --- POLLINATIONS (Free, no API key) ---
+// --- POLLINATIONS (Free, no API key for generation; key for editing) ---
 // Edit models that accept image input
-const POLLINATIONS_EDIT_MODELS = ['kontext', 'nanobanana', 'seedream'];
+const POLLINATIONS_EDIT_MODELS = ['kontext', 'nanobanana', 'nanobanana-2', 'seedream', 'gptimage', 'klein'];
 
 // Retry wrapper for Pollinations API
 async function pollinationsFetch(url, opts, retries = 2) {
@@ -1253,8 +1287,8 @@ async function pollinationsFetch(url, opts, retries = 2) {
     try {
       const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(60000) });
       if (r.ok) return r;
-      if (r.status === 500 && i < retries) {
-        console.log('[Pollinations] Retry ' + (i+1) + '/' + retries + ' after HTTP 500');
+      if ((r.status === 500 || r.status === 502) && i < retries) {
+        console.log('[Pollinations] Retry ' + (i+1) + '/' + retries + ' after HTTP ' + r.status);
         await new Promise(res => setTimeout(res, 2000 * (i+1)));
         continue;
       }
@@ -1273,13 +1307,61 @@ async function callPollinations(chat) {
   const model = state.model || 'flux';
   const isEditModel = POLLINATIONS_EDIT_MODELS.includes(model);
   const hasImage = lastUserMsg?.attachments && lastUserMsg.attachments.length > 0;
+  const pollKey = state.apiKeys?.pollinations || '';
 
   // If user attached an image and model supports editing
   if (hasImage && (isEditModel || model === 'flux')) {
     const editModel = isEditModel ? model : 'kontext';
     const imgData = lastUserMsg.attachments[0].data; // base64 data URI
 
-    // POST to image.pollinations.ai with base64 image
+    // Use gen.pollinations.ai API with key for editing (more reliable)
+    if (pollKey) {
+      const encodedPrompt = encodeURIComponent(prompt);
+      const apiUrl = `https://gen.pollinations.ai/v1/images/edits`;
+
+      const formData = new FormData();
+      // Convert base64 to blob
+      const base64Data = imgData.split(',')[1];
+      const byteChars = atob(base64Data);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+
+      formData.append('image', blob, 'image.png');
+      formData.append('prompt', prompt);
+      formData.append('model', editModel);
+      formData.append('size', '1024x1024');
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + pollKey },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || 'ویرایش تصویر ناموفق بود (HTTP ' + response.status + ')');
+      }
+
+      const result = await response.json();
+      // OpenAI-compatible response format
+      if (result.data && result.data[0]) {
+        const imgUrl = result.data[0].url;
+        const imgResponse = await fetch(imgUrl);
+        const imgBlob = await imgResponse.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve({
+            text: '✏️ تصویر ویرایش شده با Pollinations (' + editModel + '): "' + prompt + '"',
+            imageData: reader.result
+          });
+          reader.onerror = () => reject(new Error('تبدیل تصویر ناموفق بود'));
+          reader.readAsDataURL(imgBlob);
+        });
+      }
+    }
+
+    // Fallback: POST to image.pollinations.ai (free, less reliable for editing)
     const encodedPrompt = encodeURIComponent(prompt);
     const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${editModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
 
@@ -1310,7 +1392,7 @@ async function callPollinations(chat) {
     });
   }
 
-  // Regular text-to-image generation
+  // Regular text-to-image generation (free, no key needed)
   const encodedPrompt = encodeURIComponent(prompt);
   const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=${model}&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
 
@@ -1508,7 +1590,7 @@ function init() {
 
   // Auto-save API keys on input (debounced)
   let saveDebounce = null;
-  ['geminiKey', 'openrouterKey', 'groqKey'].forEach(id => {
+  ['geminiKey', 'openrouterKey', 'groqKey', 'pollinationsKey'].forEach(id => {
     const el = $(id);
     if (!el) return;
     // Add show/hide toggle button
