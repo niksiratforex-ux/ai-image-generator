@@ -227,6 +227,49 @@ body {
   border-color: var(--accent);
 }
 .form-group textarea { min-height: 80px; resize: vertical; }
+.input-with-action {
+  position: relative; display: flex; gap: 6px; align-items: center;
+}
+.input-with-action input { flex: 1; }
+.toggle-vis-btn {
+  width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text2); cursor: pointer; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.toggle-vis-btn:hover { border-color: var(--accent); color: var(--accent); }
+.key-status {
+  display: flex; align-items: center; gap: 6px; font-size: 0.72rem; margin-top: 6px;
+  padding: 4px 8px; border-radius: 6px;
+}
+.key-status.ok { color: var(--success); background: rgba(0,184,148,0.08); }
+.key-status.empty { color: var(--text2); background: transparent; }
+.key-status.invalid { color: var(--danger); background: rgba(225,112,85,0.08); }
+.settings-footer {
+  position: sticky; bottom: 0; background: var(--bg2); padding: 16px 0 0;
+  border-top: 1px solid var(--border); margin-top: 16px;
+}
+.save-row { display: flex; gap: 8px; }
+.save-btn {
+  flex: 1; padding: 12px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  font-family: 'Vazirmatn', sans-serif; transition: all 0.2s;
+}
+.save-btn:hover { opacity: 0.85; }
+.save-btn:active { transform: scale(0.97); }
+.reset-btn {
+  padding: 12px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 500;
+  background: transparent; color: var(--text2); border: 1px solid var(--border);
+  cursor: pointer; font-family: 'Vazirmatn', sans-serif; transition: all 0.2s;
+}
+.reset-btn:hover { border-color: var(--danger); color: var(--danger); }
+.save-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--success); color: #fff; padding: 10px 24px; border-radius: 12px;
+  font-size: 0.85rem; font-weight: 500; z-index: 999; opacity: 0;
+  transition: all 0.3s ease; pointer-events: none; white-space: nowrap;
+}
+.save-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .provider-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .provider-chip {
   padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
@@ -370,18 +413,34 @@ body {
     <h3>کلید API</h3>
     <div class="form-group">
       <label>Gemini API Key</label>
-      <input type="password" id="geminiKey" placeholder="AIza...">
+      <div class="input-with-action">
+        <input type="password" id="geminiKey" placeholder="AIza...">
+        <button class="toggle-vis-btn" data-target="geminiKey" title="نمایش/پنهان">👁</button>
+      </div>
+      <div class="key-status empty" id="geminiKeyStatus">⚠ هنوز وارد نشده</div>
     </div>
     <div class="form-group">
       <label>OpenRouter API Key</label>
-      <input type="password" id="openrouterKey" placeholder="sk-or-...">
+      <div class="input-with-action">
+        <input type="password" id="openrouterKey" placeholder="sk-or-...">
+        <button class="toggle-vis-btn" data-target="openrouterKey" title="نمایش/پنهان">👁</button>
+      </div>
+      <div class="key-status empty" id="openrouterKeyStatus">⚠ هنوز وارد نشده</div>
     </div>
     <div class="form-group">
       <label>Groq API Key</label>
-      <input type="password" id="groqKey" placeholder="gsk_...">
-      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="puterNote">
-        🆓 رایگان و نامحدود — نیازی به API key نیست! کاربران با حساب Puter خود وارد می‌شوند.
-        مدل‌ها: GPT Image, FLUX.2, Stable Diffusion 3, Grok Imagine
+      <div class="input-with-action">
+        <input type="password" id="groqKey" placeholder="gsk_...">
+        <button class="toggle-vis-btn" data-target="groqKey" title="نمایش/پنهان">👁</button>
+      </div>
+      <div class="key-status empty" id="groqKeyStatus">⚠ هنوز وارد نشده</div>
+    </div>
+    <div class="form-group" id="puterInfoBox" style="display:none">
+      <div style="padding:12px;background:rgba(108,92,231,0.08);border:1px solid var(--accent);border-radius:10px;font-size:0.78rem;color:var(--text);line-height:1.8">
+        <strong style="color:var(--accent)">Puter.js — تصویرساز AI</strong><br>
+        🆓 رایگان و بدون نیاز به API Key<br>
+        🔐 کافیست با حساب Puter خود وارد شوید<br>
+        🎨 مدل‌ها: GPT Image 2, FLUX.2 Pro, Stable Diffusion 3, Grok Imagine
       </div>
     </div>
   </div>
@@ -442,7 +501,17 @@ body {
       <div style="margin-top:12px;font-size:0.78rem;color:var(--text2)" id="providerUsage"></div>
     </div>
   </div>
+
+  <div class="settings-footer">
+    <div class="save-row">
+      <button class="save-btn" id="saveSettings">ذخیره تنظیمات ✓</button>
+      <button class="reset-btn" id="resetSettings">بازنشانی</button>
+    </div>
+  </div>
 </div>
+
+<!-- Save Toast -->
+<div class="save-toast" id="saveToast">✓ تنظیمات با موفقیت ذخیره شد</div>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('active')">
@@ -701,10 +770,10 @@ function initProviderChips() {
       updateModelOptions();
       updateProviderBadge();
       initProviderChips();
-      // Show/hide Cloudflare-specific inputs
+      // Show/hide Puter info box
       const isPuter = state.provider === 'puter_img';
-      const puterNote = $('puterNote');
-      if (puterNote) puterNote.style.display = isPuter ? 'block' : 'none';
+      const puterBox = $('puterInfoBox');
+      if (puterBox) puterBox.style.display = isPuter ? 'block' : 'none';
       saveState();
     });
   });
@@ -723,6 +792,7 @@ function openSettings() {
   $('maxTokens').value = state.maxTokens;
   updateModelOptions();
   updateUsageCard();
+  updateKeyStatuses();
 }
 
 function closeSettings() {
@@ -736,6 +806,69 @@ function closeSettings() {
   saveState();
   settingsPanel.classList.remove('active');
   overlay.classList.remove('active');
+}
+
+function saveSettings() {
+  state.apiKeys.gemini = $('geminiKey').value.trim();
+  state.apiKeys.openrouter = $('openrouterKey').value.trim();
+  state.apiKeys.groq = $('groqKey').value.trim();
+  state.systemPrompt = $('systemPrompt').value;
+  state.temperature = parseFloat($('tempSlider').value);
+  state.maxTokens = parseInt($('maxTokens').value);
+  state.model = $('modelSelect').value;
+  saveState();
+  updateKeyStatuses();
+  showToast();
+  settingsPanel.classList.remove('active');
+  overlay.classList.remove('active');
+}
+
+function showToast() {
+  const toast = $('saveToast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function updateKeyStatuses() {
+  const keys = {
+    gemini: { input: 'geminiKey', status: 'geminiKeyStatus', prefix: 'AIza', label: 'Gemini' },
+    openrouter: { input: 'openrouterKey', status: 'openrouterKeyStatus', prefix: 'sk-or-', label: 'OpenRouter' },
+    groq: { input: 'groqKey', status: 'groqKeyStatus', prefix: 'gsk_', label: 'Groq' }
+  };
+  for (const [provider, cfg] of Object.entries(keys)) {
+    const val = $(cfg.input).value.trim();
+    const el = $(cfg.status);
+    if (!val) {
+      el.className = 'key-status empty';
+      el.textContent = '⚠ هنوز وارد نشده';
+    } else if (!val.startsWith(cfg.prefix)) {
+      el.className = 'key-status invalid';
+      el.textContent = '❌ فرمت کلید صحیح نیست (باید با ' + cfg.prefix + ' شروع شود)';
+    } else {
+      el.className = 'key-status ok';
+      el.textContent = '✓ کلید ' + cfg.label + ' تنظیم شده';
+    }
+  }
+}
+
+function resetSettings() {
+  if (!confirm('آیا مطمئن هستید؟ تمام تنظیمات به حالت پیش‌فرض برمی‌گردد.')) return;
+  state = { ...DEFAULT_STATE };
+  saveState();
+  $('geminiKey').value = '';
+  $('openrouterKey').value = '';
+  $('groqKey').value = '';
+  $('systemPrompt').value = state.systemPrompt;
+  $('tempSlider').value = state.temperature;
+  $('tempValue').textContent = state.temperature;
+  $('maxTokens').value = state.maxTokens;
+  state.model = MODELS[state.provider][0];
+  updateModelOptions();
+  updateProviderBadge();
+  initProviderChips();
+  updateKeyStatuses();
+  updateUsageCard();
+  showToast();
 }
 
 function updateUsageCard() {
@@ -1326,6 +1459,24 @@ function init() {
   $('fileInput').addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
   $('tempSlider').addEventListener('input', (e) => { $('tempValue').textContent = e.target.value; });
   $('modelSelect').addEventListener('change', (e) => { state.model = e.target.value; saveState(); });
+
+  // Settings save/reset/toggle
+  $('saveSettings').addEventListener('click', saveSettings);
+  $('resetSettings').addEventListener('click', resetSettings);
+  document.querySelectorAll('.toggle-vis-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = $(btn.dataset.target);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.textContent = isPassword ? '🙈' : '👁';
+    });
+  });
+
+  // Live key status updates
+  ['geminiKey', 'openrouterKey', 'groqKey'].forEach(id => {
+    $(id).addEventListener('input', updateKeyStatuses);
+  });
 
   // Paste images
   document.addEventListener('paste', (e) => {
