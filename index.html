@@ -783,8 +783,14 @@ async function testConnection() {
     if (!apiKey && state.provider !== 'puter_img') throw new Error('کلید API تنظیم نشده');
 
     if (state.provider === 'puter_img') {
-      if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
+      if (typeof puter === 'undefined') {
         throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
+      }
+      let user;
+      try { user = await puter.auth.getUser(); } catch { user = null; }
+      if (!user) {
+        try { await puter.ui.login(); user = await puter.auth.getUser(); }
+        catch { throw new Error('ورود به Puter لازم است.'); }
       }
       await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-2' });
       status.textContent = '✅ اتصال موفق! تصویر تست تولید شد.';
@@ -1107,8 +1113,26 @@ async function callGroq(chat) {
 }
 
 async function callPuterImg(chat) {
-  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
+  if (typeof puter === 'undefined') {
     throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
+  }
+
+  // Check if user is authenticated with Puter
+  let user;
+  try {
+    user = await puter.auth.getUser();
+  } catch (e) {
+    user = null;
+  }
+
+  if (!user) {
+    // Try to login
+    try {
+      await puter.ui.login();
+      user = await puter.auth.getUser();
+    } catch (e) {
+      throw new Error('ورود به Puter لازم است. لطفاً ابتدا وارد حساب Puter خود شوید.');
+    }
   }
 
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
@@ -1122,36 +1146,56 @@ async function callPuterImg(chat) {
   };
   const opts = modelMap[state.model] || modelMap['gpt-image-2'];
 
-  const imgElement = await puter.ai.txt2img(prompt, {
-    provider: opts.provider,
-    model: opts.model
-  });
+  let imgElement;
+  try {
+    imgElement = await puter.ai.txt2img(prompt, {
+      provider: opts.provider,
+      model: opts.model
+    });
+  } catch (e) {
+    const msg = e?.message || e?.toString() || '';
+    if (msg.includes('401') || msg.includes('auth') || msg.includes('login')) {
+      throw new Error('خطای احراز هویت Puter. لطفاً دوباره وارد شوید.');
+    }
+    throw new Error('خطا در تولید تصویر: ' + (msg || 'خطای ناشناخته'));
+  }
+
+  // txt2img should return an HTMLImageElement
+  if (!imgElement || (!imgElement.src && !imgElement.tagName)) {
+    throw new Error('پاسخ نامعتبر از Puter دریافت شد.');
+  }
 
   let dataUrl;
 
-  // If already a data: or blob: URL, use it directly
   if (imgElement.src && (imgElement.src.startsWith('data:') || imgElement.src.startsWith('blob:'))) {
     dataUrl = imgElement.src;
   } else {
-    // Try canvas first, fall back to fetch for cross-origin images
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = imgElement.naturalWidth || imgElement.width;
-      canvas.height = imgElement.naturalHeight || imgElement.height;
+      canvas.width = imgElement.naturalWidth || imgElement.width || 512;
+      canvas.height = imgElement.naturalHeight || imgElement.height || 512;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(imgElement, 0, 0);
       dataUrl = canvas.toDataURL('image/png');
     } catch (e) {
-      // CORS tainted canvas — use fetch to get the blob instead
-      const resp = await fetch(imgElement.src);
-      const blob = await resp.blob();
-      dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      if (imgElement.src) {
+        const resp = await fetch(imgElement.src);
+        if (!resp.ok) throw new Error('دانلود تصویر ناموفق بود: HTTP ' + resp.status);
+        const blob = await resp.blob();
+        dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('تبدیل تصویر ناموفق بود'));
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        throw new Error('تصویر تولید شده معتبر نیست.');
+      }
     }
+  }
+
+  if (!dataUrl || !dataUrl.startsWith('data:')) {
+    throw new Error('تبدیل تصویر به فرمت base64 ناموفق بود.');
   }
 
   const base64 = dataUrl.split(',')[1];
