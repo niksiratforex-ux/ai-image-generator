@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Chat Pro</title>
-<script src="https://js.puter.com/v2/"></script>
+<!-- Puter.js loaded on-demand when puter_img provider is selected -->
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -227,49 +227,6 @@ body {
   border-color: var(--accent);
 }
 .form-group textarea { min-height: 80px; resize: vertical; }
-.input-with-action {
-  position: relative; display: flex; gap: 6px; align-items: center;
-}
-.input-with-action input { flex: 1; }
-.toggle-vis-btn {
-  width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--card); color: var(--text2); cursor: pointer; font-size: 0.9rem;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  transition: all 0.2s;
-}
-.toggle-vis-btn:hover { border-color: var(--accent); color: var(--accent); }
-.key-status {
-  display: flex; align-items: center; gap: 6px; font-size: 0.72rem; margin-top: 6px;
-  padding: 4px 8px; border-radius: 6px;
-}
-.key-status.ok { color: var(--success); background: rgba(0,184,148,0.08); }
-.key-status.empty { color: var(--text2); background: transparent; }
-.key-status.invalid { color: var(--danger); background: rgba(225,112,85,0.08); }
-.settings-footer {
-  position: sticky; bottom: 0; background: var(--bg2); padding: 16px 0 0;
-  border-top: 1px solid var(--border); margin-top: 16px;
-}
-.save-row { display: flex; gap: 8px; }
-.save-btn {
-  flex: 1; padding: 12px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;
-  background: var(--accent); color: #fff; border: none; cursor: pointer;
-  font-family: 'Vazirmatn', sans-serif; transition: all 0.2s;
-}
-.save-btn:hover { opacity: 0.85; }
-.save-btn:active { transform: scale(0.97); }
-.reset-btn {
-  padding: 12px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 500;
-  background: transparent; color: var(--text2); border: 1px solid var(--border);
-  cursor: pointer; font-family: 'Vazirmatn', sans-serif; transition: all 0.2s;
-}
-.reset-btn:hover { border-color: var(--danger); color: var(--danger); }
-.save-toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--success); color: #fff; padding: 10px 24px; border-radius: 12px;
-  font-size: 0.85rem; font-weight: 500; z-index: 999; opacity: 0;
-  transition: all 0.3s ease; pointer-events: none; white-space: nowrap;
-}
-.save-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .provider-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .provider-chip {
   padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
@@ -413,34 +370,18 @@ body {
     <h3>کلید API</h3>
     <div class="form-group">
       <label>Gemini API Key</label>
-      <div class="input-with-action">
-        <input type="password" id="geminiKey" placeholder="AIza...">
-        <button class="toggle-vis-btn" data-target="geminiKey" title="نمایش/پنهان">👁</button>
-      </div>
-      <div class="key-status empty" id="geminiKeyStatus">⚠ هنوز وارد نشده</div>
+      <input type="password" id="geminiKey" placeholder="AIza...">
     </div>
     <div class="form-group">
       <label>OpenRouter API Key</label>
-      <div class="input-with-action">
-        <input type="password" id="openrouterKey" placeholder="sk-or-...">
-        <button class="toggle-vis-btn" data-target="openrouterKey" title="نمایش/پنهان">👁</button>
-      </div>
-      <div class="key-status empty" id="openrouterKeyStatus">⚠ هنوز وارد نشده</div>
+      <input type="password" id="openrouterKey" placeholder="sk-or-...">
     </div>
     <div class="form-group">
       <label>Groq API Key</label>
-      <div class="input-with-action">
-        <input type="password" id="groqKey" placeholder="gsk_...">
-        <button class="toggle-vis-btn" data-target="groqKey" title="نمایش/پنهان">👁</button>
-      </div>
-      <div class="key-status empty" id="groqKeyStatus">⚠ هنوز وارد نشده</div>
-    </div>
-    <div class="form-group" id="puterInfoBox" style="display:none">
-      <div style="padding:12px;background:rgba(108,92,231,0.08);border:1px solid var(--accent);border-radius:10px;font-size:0.78rem;color:var(--text);line-height:1.8">
-        <strong style="color:var(--accent)">Puter.js — تصویرساز AI</strong><br>
-        🆓 رایگان و بدون نیاز به API Key<br>
-        🔐 کافیست با حساب Puter خود وارد شوید<br>
-        🎨 مدل‌ها: GPT Image 2, FLUX.2 Pro, Stable Diffusion 3, Grok Imagine
+      <input type="password" id="groqKey" placeholder="gsk_...">
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="puterNote">
+        🆓 رایگان و نامحدود — نیازی به API key نیست! کاربران با حساب Puter خود وارد می‌شوند.
+        مدل‌ها: GPT Image, FLUX.2, Stable Diffusion 3, Grok Imagine
       </div>
     </div>
   </div>
@@ -476,8 +417,11 @@ body {
 
   <div class="settings-section">
     <h3>تست اتصال</h3>
-    <button class="test-btn" id="testBtn">تست اتصال 🔗</button>
-    <button class="test-btn" id="testProxyBtn" style="background:var(--text2);font-size:.75rem">تست پراکسی 🌐</button>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="test-btn" id="saveKeysBtn" style="background:var(--success)">💾 ذخیره کلیدها</button>
+      <button class="test-btn" id="testBtn">تست اتصال 🔗</button>
+      <button class="test-btn" id="testProxyBtn" style="background:var(--text2);font-size:.75rem">تست پراکسی 🌐</button>
+    </div>
     <div class="test-status" id="testStatus"></div>
   </div>
 
@@ -501,17 +445,7 @@ body {
       <div style="margin-top:12px;font-size:0.78rem;color:var(--text2)" id="providerUsage"></div>
     </div>
   </div>
-
-  <div class="settings-footer">
-    <div class="save-row">
-      <button class="save-btn" id="saveSettings">ذخیره تنظیمات ✓</button>
-      <button class="reset-btn" id="resetSettings">بازنشانی</button>
-    </div>
-  </div>
 </div>
-
-<!-- Save Toast -->
-<div class="save-toast" id="saveToast">✓ تنظیمات با موفقیت ذخیره شد</div>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('active')">
@@ -521,6 +455,46 @@ body {
 <script>
 (function() {
 'use strict';
+
+// Lazy load Puter.js when needed
+let puterLoaded = false;
+function loadPuterScript() {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.puter && window.puter.ai) return resolve();
+
+    // Script tag exists but SDK not ready yet — wait
+    if (document.querySelector('script[src*="puter.com"]')) {
+      let tries = 0;
+      const wait = setInterval(() => {
+        if (window.puter && window.puter.ai) { clearInterval(wait); resolve(); }
+        if (++tries > 50) { clearInterval(wait); reject(new Error('Puter SDK بارگذاری شد ولی آماده نشد. صفحه رو رفرش کنید.')); }
+      }, 200);
+      return;
+    }
+
+    // Load fresh
+    const s = document.createElement('script');
+    s.src = 'https://js.puter.com/v2/';
+    s.onload = () => {
+      // Wait for SDK to initialize (puter.ai becomes available)
+      let tries = 0;
+      const wait = setInterval(() => {
+        if (window.puter && window.puter.ai) {
+          clearInterval(wait);
+          try { puter.quiet = true; } catch(e) {}
+          resolve();
+        }
+        if (++tries > 50) {
+          clearInterval(wait);
+          reject(new Error('Puter SDK لود شد ولی آماده نشد. اتصال اینترنت رو بررسی کنید.'));
+        }
+      }, 200);
+    };
+    s.onerror = () => reject(new Error('بارگذاری Puter.js ناموفق بود. اتصال اینترنت رو بررسی کنید.'));
+    document.head.appendChild(s);
+  });
+}
 
 // --- STATE ---
 const DEFAULT_STATE = {
@@ -701,7 +675,7 @@ function renderMessages() {
     // Meta
     content += `<div class="message-meta"><span>${formatTime(msg.timestamp)}</span>`;
     if (msg.role === 'assistant') {
-      content += `<button class="copy-btn" onclick="copyText(this, '${escapeAttr(msg.text)}')">کپی 📋</button>`;
+      content += `<button class="copy-btn" data-copy="${escapeAttr(msg.text)}">کپی 📋</button>`;
     }
     content += '</div>';
 
@@ -721,7 +695,14 @@ function formatMessageText(text) {
 }
 
 function escapeAttr(text) {
-  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '&#10;')
+    .replace(/\r/g, '');
 }
 
 // Typing indicator
@@ -770,10 +751,10 @@ function initProviderChips() {
       updateModelOptions();
       updateProviderBadge();
       initProviderChips();
-      // Show/hide Puter info box
+      // Show/hide Cloudflare-specific inputs
       const isPuter = state.provider === 'puter_img';
-      const puterBox = $('puterInfoBox');
-      if (puterBox) puterBox.style.display = isPuter ? 'block' : 'none';
+      const puterNote = $('puterNote');
+      if (puterNote) puterNote.style.display = isPuter ? 'block' : 'none';
       saveState();
     });
   });
@@ -792,83 +773,23 @@ function openSettings() {
   $('maxTokens').value = state.maxTokens;
   updateModelOptions();
   updateUsageCard();
-  updateKeyStatuses();
+}
+
+function saveSettingsInputs() {
+  state.apiKeys.gemini = $('geminiKey').value.trim();
+  state.apiKeys.openrouter = $('openrouterKey').value.trim();
+  state.apiKeys.groq = $('groqKey').value.trim();
+  state.systemPrompt = $('systemPrompt').value;
+  state.temperature = parseFloat($('tempSlider').value);
+  state.maxTokens = parseInt($('maxTokens').value);
+  state.model = $('modelSelect').value;
+  saveState();
 }
 
 function closeSettings() {
-  state.apiKeys.gemini = $('geminiKey').value.trim();
-  state.apiKeys.openrouter = $('openrouterKey').value.trim();
-  state.apiKeys.groq = $('groqKey').value.trim();
-  state.systemPrompt = $('systemPrompt').value;
-  state.temperature = parseFloat($('tempSlider').value);
-  state.maxTokens = parseInt($('maxTokens').value);
-  state.model = $('modelSelect').value;
-  saveState();
+  saveSettingsInputs();
   settingsPanel.classList.remove('active');
   overlay.classList.remove('active');
-}
-
-function saveSettings() {
-  state.apiKeys.gemini = $('geminiKey').value.trim();
-  state.apiKeys.openrouter = $('openrouterKey').value.trim();
-  state.apiKeys.groq = $('groqKey').value.trim();
-  state.systemPrompt = $('systemPrompt').value;
-  state.temperature = parseFloat($('tempSlider').value);
-  state.maxTokens = parseInt($('maxTokens').value);
-  state.model = $('modelSelect').value;
-  saveState();
-  updateKeyStatuses();
-  showToast();
-  settingsPanel.classList.remove('active');
-  overlay.classList.remove('active');
-}
-
-function showToast() {
-  const toast = $('saveToast');
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
-}
-
-function updateKeyStatuses() {
-  const keys = {
-    gemini: { input: 'geminiKey', status: 'geminiKeyStatus', prefix: 'AIza', label: 'Gemini' },
-    openrouter: { input: 'openrouterKey', status: 'openrouterKeyStatus', prefix: 'sk-or-', label: 'OpenRouter' },
-    groq: { input: 'groqKey', status: 'groqKeyStatus', prefix: 'gsk_', label: 'Groq' }
-  };
-  for (const [provider, cfg] of Object.entries(keys)) {
-    const val = $(cfg.input).value.trim();
-    const el = $(cfg.status);
-    if (!val) {
-      el.className = 'key-status empty';
-      el.textContent = '⚠ هنوز وارد نشده';
-    } else if (!val.startsWith(cfg.prefix)) {
-      el.className = 'key-status invalid';
-      el.textContent = '❌ فرمت کلید صحیح نیست (باید با ' + cfg.prefix + ' شروع شود)';
-    } else {
-      el.className = 'key-status ok';
-      el.textContent = '✓ کلید ' + cfg.label + ' تنظیم شده';
-    }
-  }
-}
-
-function resetSettings() {
-  if (!confirm('آیا مطمئن هستید؟ تمام تنظیمات به حالت پیش‌فرض برمی‌گردد.')) return;
-  state = { ...DEFAULT_STATE };
-  saveState();
-  $('geminiKey').value = '';
-  $('openrouterKey').value = '';
-  $('groqKey').value = '';
-  $('systemPrompt').value = state.systemPrompt;
-  $('tempSlider').value = state.temperature;
-  $('tempValue').textContent = state.temperature;
-  $('maxTokens').value = state.maxTokens;
-  state.model = MODELS[state.provider][0];
-  updateModelOptions();
-  updateProviderBadge();
-  initProviderChips();
-  updateKeyStatuses();
-  updateUsageCard();
-  showToast();
 }
 
 function updateUsageCard() {
@@ -904,6 +825,7 @@ async function testProxies() {
 }
 
 async function testConnection() {
+  saveSettingsInputs(); // Save current inputs to state first
   const status = $('testStatus');
   status.className = 'test-status';
   status.style.display = 'none';
@@ -916,18 +838,17 @@ async function testConnection() {
     if (!apiKey && state.provider !== 'puter_img') throw new Error('کلید API تنظیم نشده');
 
     if (state.provider === 'puter_img') {
-      if (typeof puter === 'undefined') {
-        throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
+      // Test Puter.js image generation
+      try {
+        await loadPuterScript();
+        if (!window.puter || !window.puter.ai) throw new Error('SDK آماده نیست');
+        const img = await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-1-mini' });
+        status.textContent = '✅ اتصال موفق! تصویر تست تولید شد.';
+        status.className = 'test-status success';
+      } catch (putErr) {
+        status.textContent = '❌ خطا: ' + putErr.message + '\n💡 فایل رو با http://localhost باز کنید';
+        status.className = 'test-status error';
       }
-      let user;
-      try { user = await puter.auth.getUser(); } catch { user = null; }
-      if (!user) {
-        try { await puter.ui.login(); user = await puter.auth.getUser(); }
-        catch { throw new Error('ورود به Puter لازم است.'); }
-      }
-      await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-2' });
-      status.textContent = '✅ اتصال موفق! تصویر تست تولید شد.';
-      status.className = 'test-status success';
       return;
     }
 
@@ -995,7 +916,7 @@ async function aiFetch(url, opts) {
       try {
         const errBody = await r.json();
         if (errBody.error || errBody.candidates || errBody.choices) {
-          return { ok: false, json: () => Promise.resolve(errBody), status: r.status };
+          return { ok: false, json: () => Promise.resolve(errBody), status: r.status, statusText: r.statusText };
         }
       } catch {}
       lastErr = new Error('HTTP ' + r.status);
@@ -1005,7 +926,7 @@ async function aiFetch(url, opts) {
       continue;
     }
   }
-  throw new Error('اتصال برقرار نشد — همه پراکسی‌ها ناموفق بودند. اگر از file:// استفاده می‌کنید، با http://localhost باز کنید.');
+  throw new Error('اتصال برقرار نشد. ' + (lastErr ? lastErr.message : ''));
 }
 
 // --- IMAGE DETECTION ---
@@ -1112,10 +1033,6 @@ async function callGemini(chat, wantsImage) {
 
   // Build contents
   const contents = [];
-  if (state.systemPrompt) {
-    contents.push({ role: 'user', parts: [{ text: state.systemPrompt }] });
-    contents.push({ role: 'model', parts: [{ text: 'بله، متوجه شدم. آماده‌ام کمک کنم.' }] });
-  }
 
   chat.messages.forEach(msg => {
     const parts = [];
@@ -1139,8 +1056,13 @@ async function callGemini(chat, wantsImage) {
     }
   };
 
-  if (wantsImage && state.model.includes('gemini')) {
+  if (wantsImage && (state.model.includes('gemini-2.0') || state.model.includes('gemini-2.5'))) {
     body.generationConfig.responseModalities = ['TEXT', 'IMAGE'];
+  }
+
+  // Use native system instruction for Gemini
+  if (state.systemPrompt) {
+    body.systemInstruction = { parts: [{ text: state.systemPrompt }] };
   }
 
   const r = await aiFetch(url, {
@@ -1151,7 +1073,7 @@ async function callGemini(chat, wantsImage) {
   const data = await r.json();
 
   if (!data.candidates || data.candidates.length === 0) {
-    throw new Error(data.error?.message || 'پاسخی دریافت نشد');
+    throw new Error(data.error?.message || 'پاسخی دریافت نشد (HTTP ' + (r.status || '?') + ')');
   }
 
   const parts = data.candidates[0].content?.parts || [];
@@ -1246,31 +1168,20 @@ async function callGroq(chat) {
 }
 
 async function callPuterImg(chat) {
-  if (typeof puter === 'undefined') {
-    throw new Error('کتابخانه Puter.js بارگذاری نشد. صفحه را رفرش کنید.');
-  }
-
-  // Check if user is authenticated with Puter
-  let user;
   try {
-    user = await puter.auth.getUser();
+    await loadPuterScript();
   } catch (e) {
-    user = null;
+    throw new Error('Puter SDK لود نشد: ' + e.message + '\n\n💡 راه‌حل: فایل رو با http://localhost باز کنید (نه file://)');
   }
 
-  if (!user) {
-    // Try to login
-    try {
-      await puter.ui.login();
-      user = await puter.auth.getUser();
-    } catch (e) {
-      throw new Error('ورود به Puter لازم است. لطفاً ابتدا وارد حساب Puter خود شوید.');
-    }
+  if (!window.puter || !window.puter.ai) {
+    throw new Error('Puter SDK آماده نیست. صفحه رو رفرش کنید یا با http://localhost باز کنید.');
   }
 
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
   const prompt = lastUserMsg?.text || 'A beautiful landscape';
 
+  // Map model names to Puter.js provider/model options
   const modelMap = {
     'gpt-image-2': { provider: 'openai-image-generation', model: 'gpt-image-2' },
     'flux-2-pro': { provider: 'replicate-image-generation', model: 'black-forest-labs/flux-2-pro' },
@@ -1279,64 +1190,23 @@ async function callPuterImg(chat) {
   };
   const opts = modelMap[state.model] || modelMap['gpt-image-2'];
 
-  let imgElement;
-  try {
-    imgElement = await puter.ai.txt2img(prompt, {
-      provider: opts.provider,
-      model: opts.model
-    });
-  } catch (e) {
-    const msg = e?.message || e?.toString() || '';
-    if (msg.includes('401') || msg.includes('auth') || msg.includes('login')) {
-      throw new Error('خطای احراز هویت Puter. لطفاً دوباره وارد شوید.');
-    }
-    throw new Error('خطا در تولید تصویر: ' + (msg || 'خطای ناشناخته'));
-  }
+  // Use Puter.js txt2img API
+  const imgElement = await puter.ai.txt2img(prompt, {
+    provider: opts.provider,
+    model: opts.model
+  });
 
-  // txt2img should return an HTMLImageElement
-  if (!imgElement || (!imgElement.src && !imgElement.tagName)) {
-    throw new Error('پاسخ نامعتبر از Puter دریافت شد.');
-  }
-
-  let dataUrl;
-
-  if (imgElement.src && (imgElement.src.startsWith('data:') || imgElement.src.startsWith('blob:'))) {
-    dataUrl = imgElement.src;
-  } else {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = imgElement.naturalWidth || imgElement.width || 512;
-      canvas.height = imgElement.naturalHeight || imgElement.height || 512;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(imgElement, 0, 0);
-      dataUrl = canvas.toDataURL('image/png');
-    } catch (e) {
-      if (imgElement.src) {
-        const resp = await fetch(imgElement.src);
-        if (!resp.ok) throw new Error('دانلود تصویر ناموفق بود: HTTP ' + resp.status);
-        const blob = await resp.blob();
-        dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('تبدیل تصویر ناموفق بود'));
-          reader.readAsDataURL(blob);
-        });
-      } else {
-        throw new Error('تصویر تولید شده معتبر نیست.');
-      }
-    }
-  }
-
-  if (!dataUrl || !dataUrl.startsWith('data:')) {
-    throw new Error('تبدیل تصویر به فرمت base64 ناموفق بود.');
-  }
-
-  const base64 = dataUrl.split(',')[1];
-  const mimeType = (dataUrl.split(';')[0].split(':')[1]) || 'image/png';
+  // Convert the returned image element to base64
+  const canvas = document.createElement('canvas');
+  canvas.width = imgElement.naturalWidth || imgElement.width;
+  canvas.height = imgElement.naturalHeight || imgElement.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imgElement, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
 
   return {
     text: '🎨 تصویر تولید شده: "' + prompt + '"',
-    imageData: { mimeType, data: base64 }
+    imageData: dataUrl
   };
 }
 
@@ -1415,13 +1285,21 @@ window.showLightbox = function(src) {
 };
 
 // --- COPY ---
-window.copyText = function(btn, text) {
-  const decoded = text.replace(/\\n/g, '\n').replace(/\\'/g, "'").replace(/\\\\/g, '\\');
-  navigator.clipboard.writeText(decoded).then(() => {
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn || !btn.dataset.copy) return;
+  const text = btn.dataset.copy
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#10;/g, '\n');
+  navigator.clipboard.writeText(text).then(() => {
     btn.textContent = 'کپی شد ✅';
     setTimeout(() => { btn.textContent = 'کپی 📋'; }, 1500);
   });
-};
+});
 
 // --- INIT ---
 function init() {
@@ -1453,30 +1331,47 @@ function init() {
   overlay.addEventListener('click', closeSettings);
   $('testBtn').addEventListener('click', testConnection);
   $('testProxyBtn').addEventListener('click', testProxies);
+  $('saveKeysBtn').addEventListener('click', () => {
+    saveSettingsInputs();
+    const status = $('testStatus');
+    status.textContent = '✅ کلیدها ذخیره شدند!';
+    status.className = 'test-status success';
+    status.style.display = 'block';
+    setTimeout(() => { status.style.display = 'none'; }, 2000);
+  });
   $('exportTxt').addEventListener('click', exportTxt);
   $('exportJson').addEventListener('click', exportJson);
   $('attachBtn').addEventListener('click', () => $('fileInput').click());
   $('fileInput').addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
-  $('tempSlider').addEventListener('input', (e) => { $('tempValue').textContent = e.target.value; });
-  $('modelSelect').addEventListener('change', (e) => { state.model = e.target.value; saveState(); });
 
-  // Settings save/reset/toggle
-  $('saveSettings').addEventListener('click', saveSettings);
-  $('resetSettings').addEventListener('click', resetSettings);
-  document.querySelectorAll('.toggle-vis-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = $(btn.dataset.target);
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      btn.textContent = isPassword ? '🙈' : '👁';
+  // Auto-save API keys on input (debounced)
+  let saveDebounce = null;
+  ['geminiKey', 'openrouterKey', 'groqKey'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    // Add show/hide toggle button
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.textContent = '👁';
+    toggle.style.cssText = 'position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:0.9rem;padding:4px;';
+    el.parentElement.style.position = 'relative';
+    el.style.paddingLeft = '36px';
+    el.parentElement.appendChild(toggle);
+    toggle.addEventListener('click', () => {
+      el.type = el.type === 'password' ? 'text' : 'password';
+      toggle.textContent = el.type === 'password' ? '👁' : '🙈';
+    });
+    // Auto-save on input
+    el.addEventListener('input', () => {
+      clearTimeout(saveDebounce);
+      saveDebounce = setTimeout(() => {
+        saveSettingsInputs();
+        updateProviderBadge();
+      }, 500);
     });
   });
-
-  // Live key status updates
-  ['geminiKey', 'openrouterKey', 'groqKey'].forEach(id => {
-    $(id).addEventListener('input', updateKeyStatuses);
-  });
+  $('tempSlider').addEventListener('input', (e) => { $('tempValue').textContent = e.target.value; });
+  $('modelSelect').addEventListener('change', (e) => { state.model = e.target.value; saveState(); });
 
   // Paste images
   document.addEventListener('paste', (e) => {
