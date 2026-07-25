@@ -362,7 +362,8 @@ body {
       <button class="provider-chip active" data-provider="gemini">Gemini</button>
       <button class="provider-chip" data-provider="openrouter">OpenRouter</button>
       <button class="provider-chip" data-provider="groq">Groq</button>
-      <button class="provider-chip" data-provider="puter_img">🎨 تصویرساز</button>
+      <button class="provider-chip" data-provider="pollinations">🎨 تصویرساز</button>
+      <button class="provider-chip" data-provider="puter_img">Puter تصویرساز</button>
     </div>
   </div>
 
@@ -382,6 +383,9 @@ body {
       <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="puterNote">
         🆓 رایگان و نامحدود — نیازی به API key نیست! کاربران با حساب Puter خود وارد می‌شوند.
         مدل‌ها: GPT Image, FLUX.2, Stable Diffusion 3, Grok Imagine
+      </div>
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="pollinationsNote">
+        🆓 رایگان و بدون نیاز به API key یا ثبت‌نام! مدل‌ها: FLUX، FLUX Anime، FLUX 3D، Turbo
       </div>
     </div>
   </div>
@@ -510,13 +514,14 @@ const DEFAULT_STATE = {
   theme: 'dark',
   chats: [],
   activeChat: null,
-  providerUsageStats: { gemini: 0, openrouter: 0, groq: 0 }
+  providerUsageStats: { gemini: 0, openrouter: 0, groq: 0, pollinations: 0 }
 };
 
 const MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   openrouter: ['google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3.1', 'anthropic/claude-sonnet-4', 'openai/gpt-oss-20b:free'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+  pollinations: ['flux', 'flux-realism', 'flux-anime', 'flux-3d', 'flux-cablyai', 'turbo'],
   puter_img: ['gpt-image-2', 'flux-2-pro', 'stable-diffusion-3', 'grok-imagine-image']
 };
 
@@ -545,7 +550,7 @@ function loadState() {
     const saved = localStorage.getItem('ai_chat_pro');
     state = saved ? { ...DEFAULT_STATE, ...JSON.parse(saved) } : { ...DEFAULT_STATE };
     if (!state.apiKeys) state.apiKeys = { gemini: '', openrouter: '', groq: '' };
-    if (!state.providerUsageStats) state.providerUsageStats = { gemini: 0, openrouter: 0, groq: 0 };
+    if (!state.providerUsageStats) state.providerUsageStats = { gemini: 0, openrouter: 0, groq: 0, pollinations: 0 };
   } catch { state = { ...DEFAULT_STATE }; }
   checkDailyReset();
 }
@@ -751,10 +756,13 @@ function initProviderChips() {
       updateModelOptions();
       updateProviderBadge();
       initProviderChips();
-      // Show/hide Cloudflare-specific inputs
+      // Show/hide provider-specific notes
       const isPuter = state.provider === 'puter_img';
       const puterNote = $('puterNote');
       if (puterNote) puterNote.style.display = isPuter ? 'block' : 'none';
+      // Show pollinations note
+      const pollNote = $('pollinationsNote');
+      if (pollNote) pollNote.style.display = state.provider === 'pollinations' ? 'block' : 'none';
       saveState();
     });
   });
@@ -799,7 +807,7 @@ function updateUsageCard() {
   $('usageCount').textContent = `${state.dailyUsage} / ${state.dailyLimit} پیام`;
   $('usageDate').textContent = state.dailyUsageDate || '-';
   const stats = state.providerUsageStats || {};
-  $('providerUsage').innerHTML = `Gemini: ${stats.gemini || 0} | OpenRouter: ${stats.openrouter || 0} | Groq: ${stats.groq || 0}`;
+  $('providerUsage').innerHTML = `Gemini: ${stats.gemini || 0} | OpenRouter: ${stats.openrouter || 0} | Groq: ${stats.groq || 0} | Pollinations: ${stats.pollinations || 0}`;
 }
 
 // --- CONNECTION TEST ---
@@ -835,7 +843,26 @@ async function testConnection() {
 
   try {
     const apiKey = state.apiKeys[state.provider];
-    if (!apiKey && state.provider !== 'puter_img') throw new Error('کلید API تنظیم نشده');
+    const noKeyProviders = ['puter_img', 'pollinations'];
+    if (!apiKey && !noKeyProviders.includes(state.provider)) throw new Error('کلید API تنظیم نشده');
+
+    if (state.provider === 'pollinations') {
+      // Test Pollinations image generation
+      try {
+        const testUrl = 'https://image.pollinations.ai/prompt/a%20cute%20cat?width=256&height=256&nologo=true';
+        const r = await fetch(testUrl);
+        if (r.ok) {
+          status.textContent = '✅ اتصال موفق! Pollinations رایگان و بدون نیاز به API key کار می‌کنه.';
+          status.className = 'test-status success';
+        } else {
+          throw new Error('HTTP ' + r.status);
+        }
+      } catch (pollErr) {
+        status.textContent = '❌ خطا: ' + pollErr.message;
+        status.className = 'test-status error';
+      }
+      return;
+    }
 
     if (state.provider === 'puter_img') {
       // Test Puter.js image generation
@@ -974,9 +1001,10 @@ async function sendMessage() {
   saveState();
   renderMessages();
 
-  // Check API key (skip for puter_img — no key needed)
+  // Check API key (skip for providers that don't need one)
   const apiKey = state.apiKeys[state.provider];
-  if (!apiKey && state.provider !== 'puter_img') {
+  const noKeyProviders = ['puter_img', 'pollinations'];
+  if (!apiKey && !noKeyProviders.includes(state.provider)) {
     const errMsg = { role: 'assistant', text: '❌ لطفاً ابتدا کلید API را در تنظیمات وارد کنید.', timestamp: Date.now(), isError: true };
     chat.messages.push(errMsg);
     saveState();
@@ -1023,6 +1051,7 @@ async function callAPI(chat, wantsImage) {
   if (state.provider === 'gemini') return callGemini(chat, wantsImage);
   if (state.provider === 'openrouter') return callOpenRouter(chat);
   if (state.provider === 'groq') return callGroq(chat);
+  if (state.provider === 'pollinations') return callPollinations(chat);
   if (state.provider === 'puter_img') return callPuterImg(chat);
   throw new Error('ارائه‌دهنده نامعتبر');
 }
@@ -1073,7 +1102,15 @@ async function callGemini(chat, wantsImage) {
   const data = await r.json();
 
   if (!data.candidates || data.candidates.length === 0) {
-    throw new Error(data.error?.message || 'پاسخی دریافت نشد (HTTP ' + (r.status || '?') + ')');
+    const errMsg = data.error?.message || 'پاسخی دریافت نشد (HTTP ' + (r.status || '?') + ')';
+    // Detect rate limit / quota errors
+    if (data.error?.status === 'RESOURCE_EXHAUSTED' || r.status === 429 || errMsg.includes('429') || errMsg.includes('quota')) {
+      throw new Error('⚠️ محدودیت رایگان Gemini تمام شد. راه‌حل:\n' +
+        '۱. کلید API جدید از aistudio.google.com بسازید\n' +
+        '۲. یا از OpenRouter (رایگان) استفاده کنید\n' +
+        '۳. یا از Pollinations برای تصویرسازی استفاده کنید');
+    }
+    throw new Error(errMsg);
   }
 
   const parts = data.candidates[0].content?.parts || [];
@@ -1165,6 +1202,32 @@ async function callGroq(chat) {
   }
 
   return { text: data.choices[0].message?.content || '' };
+}
+
+// --- POLLINATIONS (Free, no API key) ---
+async function callPollinations(chat) {
+  const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+  const prompt = lastUserMsg?.text || 'A beautiful landscape';
+  const model = state.model || 'flux';
+
+  // image.pollinations.ai is a simple GET endpoint that returns a JPEG
+  const encodedPrompt = encodeURIComponent(prompt);
+  const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=${model}&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
+
+  // Fetch the image and convert to base64
+  const response = await fetch(imgUrl);
+  if (!response.ok) throw new Error('تولید تصویر ناموفق بود (HTTP ' + response.status + ')');
+
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve({
+      text: '🎨 تصویر تولید شده با Pollinations: "' + prompt + '"\nمدل: ' + model,
+      imageData: reader.result
+    });
+    reader.onerror = () => reject(new Error('تبدیل تصویر ناموفق بود'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function callPuterImg(chat) {
