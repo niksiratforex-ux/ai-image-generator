@@ -461,6 +461,13 @@ body {
   </div>
 
   <div class="settings-section">
+    <h3>مدل</h3>
+    <div class="form-group">
+      <select id="modelSelect"></select>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <h3>کلید API <span style="font-size:0.7rem;font-weight:400;color:var(--text2)">(میتونی چند کلید اضافه کنی — چرخش خودکار هنگام محدودیت)</span></h3>
 
     <div class="form-group" id="geminiKeysGroup">
@@ -497,13 +504,6 @@ body {
       <div style="font-size:0.68rem;color:var(--text2);margin-top:4px">
         🔗 <a href="https://enter.pollinations.ai/keys" target="_blank" style="color:var(--accent)">دریافت</a> — ویرایش تصویر نیاز به شارژ داره
       </div>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <h3>مدل</h3>
-    <div class="form-group">
-      <select id="modelSelect"></select>
     </div>
   </div>
 
@@ -1049,6 +1049,8 @@ function addKeyField(provider) {
   saveState();
   renderKeyFields(provider);
 }
+// Expose to global scope for inline onclick handlers
+window.addKeyField = addKeyField;
 
 function saveKeysFromUI() {
   ['gemini', 'openrouter', 'groq', 'pollinations'].forEach(provider => {
