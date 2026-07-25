@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Chat Pro</title>
+<script src="https://js.puter.com/v2/"></script>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -361,7 +362,7 @@ body {
       <button class="provider-chip active" data-provider="gemini">Gemini</button>
       <button class="provider-chip" data-provider="openrouter">OpenRouter</button>
       <button class="provider-chip" data-provider="groq">Groq</button>
-      <button class="provider-chip" data-provider="cloudflare_img">🎨 تصویرساز</button>
+      <button class="provider-chip" data-provider="puter_img">🎨 تصویرساز</button>
     </div>
   </div>
 
@@ -378,12 +379,9 @@ body {
     <div class="form-group">
       <label>Groq API Key</label>
       <input type="password" id="groqKey" placeholder="gsk_...">
-      <input type="password" id="cloudflare_imgKey" placeholder="کلید API Cloudflare Worker..." style="display:none">
-      <input type="text" id="cloudflare_imgUrl" placeholder="https://your-worker.your-subdomain.workers.dev" style="display:none">
-      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="cfNote">
-        📌 <a href="https://github.com/saurav-z/free-image-generation-api" target="_blank" style="color:var(--accent)">راهنمای راه‌اندازی</a> — Worker خود را با CORS headers مستقر کنید.
-        کد Worker را با اضافه کردن هدرهای CORS به‌روز کنید:
-        <code style="display:block;margin-top:4px;padding:6px;background:var(--input-bg);border-radius:6px;font-size:.7rem;direction:ltr;text-align:left">'Access-Control-Allow-Origin': '*'</code>
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:4px;display:none" id="puterNote">
+        🆓 رایگان و نامحدود — نیازی به API key نیست! کاربران با حساب Puter خود وارد می‌شوند.
+        مدل‌ها: GPT Image, FLUX.2, Stable Diffusion 3, Grok Imagine
       </div>
     </div>
   </div>
@@ -459,8 +457,7 @@ body {
 const DEFAULT_STATE = {
   provider: 'gemini',
   model: 'gemini-2.0-flash',
-  apiKeys: { gemini: '', openrouter: '', groq: '', cloudflare_img: '' },
-  cfWorkerUrl: '',
+  apiKeys: { gemini: '', openrouter: '', groq: '' },
   systemPrompt: 'شما یک دستیار هوش مصنوعی مفید و دقیق هستید. به فارسی پاسخ دهید مگر اینکه کاربر زبان دیگری بخواهد.',
   temperature: 0.7,
   maxTokens: 4096,
@@ -477,7 +474,7 @@ const MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   openrouter: ['google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3.1', 'anthropic/claude-sonnet-4', 'openai/gpt-oss-20b:free'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-  cloudflare_img: ['stable-diffusion-xl']
+  puter_img: ['gpt-image-2', 'flux-2-pro', 'stable-diffusion-3', 'grok-imagine-image']
 };
 
 const IMAGE_KEYWORDS = ['تصویر', 'عکس', 'نقاشی', 'generate image', 'create image', 'draw', 'paint', 'تصویر بساز', 'عکس بساز', 'بکش'];
@@ -705,14 +702,9 @@ function initProviderChips() {
       updateProviderBadge();
       initProviderChips();
       // Show/hide Cloudflare-specific inputs
-      const isCF = state.provider === 'cloudflare_img';
-      const cfKeyEl = $('cloudflare_imgKey');
-      const cfUrlEl = $('cloudflare_imgUrl');
-      if (cfKeyEl) cfKeyEl.style.display = isCF ? 'block' : 'none';
-      if (cfUrlEl) cfUrlEl.style.display = isCF ? 'block' : 'none';
-      // Hide/show model select for CF (only 1 model)
-      const modelRow = $('modelSelect')?.closest('.setting-group');
-      if (modelRow) modelRow.style.display = isCF ? 'none' : '';
+      const isPuter = state.provider === 'puter_img';
+      const puterNote = $('puterNote');
+      if (puterNote) puterNote.style.display = isPuter ? 'block' : 'none';
       saveState();
     });
   });
@@ -725,8 +717,6 @@ function openSettings() {
   $('geminiKey').value = state.apiKeys.gemini;
   $('openrouterKey').value = state.apiKeys.openrouter;
   $('groqKey').value = state.apiKeys.groq;
-  $('cloudflare_imgKey').value = state.apiKeys.cloudflare_img;
-  $('cloudflare_imgUrl').value = state.cfWorkerUrl || '';
   $('systemPrompt').value = state.systemPrompt;
   $('tempSlider').value = state.temperature;
   $('tempValue').textContent = state.temperature;
@@ -739,8 +729,6 @@ function closeSettings() {
   state.apiKeys.gemini = $('geminiKey').value.trim();
   state.apiKeys.openrouter = $('openrouterKey').value.trim();
   state.apiKeys.groq = $('groqKey').value.trim();
-  state.apiKeys.cloudflare_img = $('cloudflare_imgKey').value.trim();
-  state.cfWorkerUrl = $('cloudflare_imgUrl').value.trim();
   state.systemPrompt = $('systemPrompt').value;
   state.temperature = parseFloat($('tempSlider').value);
   state.maxTokens = parseInt($('maxTokens').value);
@@ -792,7 +780,15 @@ async function testConnection() {
 
   try {
     const apiKey = state.apiKeys[state.provider];
-    if (!apiKey) throw new Error('کلید API تنظیم نشده');
+    if (!apiKey && state.provider !== 'puter_img') throw new Error('کلید API تنظیم نشده');
+
+    if (state.provider === 'puter_img') {
+      // Test Puter.js image generation
+      const img = await puter.ai.txt2img('A cute cat', { provider: 'openai-image-generation', model: 'gpt-image-1-mini' });
+      status.textContent = '✅ اتصال موفق! تصویر تست تولید شد.';
+      status.className = 'test-status success';
+      return;
+    }
 
     if (state.provider === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${apiKey}`;
@@ -916,9 +912,9 @@ async function sendMessage() {
   saveState();
   renderMessages();
 
-  // Check API key
+  // Check API key (skip for puter_img — no key needed)
   const apiKey = state.apiKeys[state.provider];
-  if (!apiKey) {
+  if (!apiKey && state.provider !== 'puter_img') {
     const errMsg = { role: 'assistant', text: '❌ لطفاً ابتدا کلید API را در تنظیمات وارد کنید.', timestamp: Date.now(), isError: true };
     chat.messages.push(errMsg);
     saveState();
@@ -965,7 +961,7 @@ async function callAPI(chat, wantsImage) {
   if (state.provider === 'gemini') return callGemini(chat, wantsImage);
   if (state.provider === 'openrouter') return callOpenRouter(chat);
   if (state.provider === 'groq') return callGroq(chat);
-  if (state.provider === 'cloudflare_img') return callCloudflareImg(chat);
+  if (state.provider === 'puter_img') return callPuterImg(chat);
   throw new Error('ارائه‌دهنده نامعتبر');
 }
 
@@ -1108,40 +1104,37 @@ async function callGroq(chat) {
   return { text: data.choices[0].message?.content || '' };
 }
 
-async function callCloudflareImg(chat) {
-  const apiKey = state.apiKeys.cloudflare_img;
-  const workerUrl = state.cfWorkerUrl;
-  if (!workerUrl) throw new Error('آدرس Worker Cloudflare را وارد کنید');
-
-  // Get the last user message as the prompt
+async function callPuterImg(chat) {
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
   const prompt = lastUserMsg?.text || 'A beautiful landscape';
 
-  const r = await aiFetch(workerUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': '***' + apiKey
-    },
-    body: JSON.stringify({ prompt })
+  // Map model names to Puter.js provider/model options
+  const modelMap = {
+    'gpt-image-2': { provider: 'openai-image-generation', model: 'gpt-image-2' },
+    'flux-2-pro': { provider: 'replicate-image-generation', model: 'black-forest-labs/flux-2-pro' },
+    'stable-diffusion-3': { provider: 'replicate-image-generation', model: 'stabilityai/stable-diffusion-3-medium' },
+    'grok-imagine-image': { provider: 'xai', model: 'grok-imagine-image' }
+  };
+  const opts = modelMap[state.model] || modelMap['gpt-image-2'];
+
+  // Use Puter.js txt2img API
+  const imgElement = await puter.ai.txt2img(prompt, {
+    provider: opts.provider,
+    model: opts.model
   });
 
-  if (!r.ok) {
-    let errMsg = 'خطای سرور';
-    try { const d = await r.json(); errMsg = d.error || errMsg; } catch {}
-    throw new Error(errMsg);
-  }
-
-  const blob = await r.blob();
-  const base64 = await new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.readAsDataURL(blob);
-  });
+  // Convert the returned image element to base64
+  const canvas = document.createElement('canvas');
+  canvas.width = imgElement.naturalWidth || imgElement.width;
+  canvas.height = imgElement.naturalHeight || imgElement.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imgElement, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
+  const base64 = dataUrl.split(',')[1];
 
   return {
-    text: '🎨 تصویر تولید شده بر اساس: "' + prompt + '"',
-    imageData: { mimeType: 'image/jpeg', data: base64 }
+    text: '🎨 تصویر تولید شده: "' + prompt + '"',
+    imageData: { mimeType: 'image/png', data: base64 }
   };
 }
 
